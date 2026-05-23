@@ -98,17 +98,20 @@ const HoneycombBg = (() => {
   }
 
   function resize() {
-    w = canvas.width = canvas.offsetWidth;
-    h = canvas.height = canvas.offsetHeight;
+    const p = canvas.parentElement;
+    w = canvas.width = p.clientWidth || p.offsetWidth || 800;
+    h = canvas.height = p.clientHeight || p.offsetHeight || 600;
   }
 
   function init(el) {
     canvas = el;
     ctx = canvas.getContext('2d');
-    resize();
-    initBlobs();
     window.addEventListener('resize', resize);
-    requestAnimationFrame(draw);
+    requestAnimationFrame(() => {
+      resize();
+      initBlobs();
+      requestAnimationFrame(draw);
+    });
   }
 
   return { init };
