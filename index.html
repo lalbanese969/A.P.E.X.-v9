@@ -11,30 +11,205 @@
 </head>
 <body>
 
+  <!-- INSTALL OVERLAY -->
+  <div id="install-overlay">
+    <div id="install-card">
+      <svg id="install-icon" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+        <rect width="192" height="192" fill="#0a0a0a"/>
+        <polygon points="96,10 171,53 171,139 96,182 21,139 21,53" fill="#0a0a0a" stroke="#FF6B00" stroke-width="5" stroke-linejoin="miter"/>
+        <polygon points="96,22 159,60 159,132 96,170 33,132 33,60" fill="none" stroke="#FF6B00" stroke-width="1" opacity="0.35"/>
+        <text x="96" y="124" font-family="'Arial Black','Impact',sans-serif" font-size="88" font-weight="900" fill="#FF6B00" text-anchor="middle">A</text>
+        <line x1="21" y1="96" x2="38" y2="96" stroke="#FF6B00" stroke-width="2.5"/>
+        <line x1="154" y1="96" x2="171" y2="96" stroke="#FF6B00" stroke-width="2.5"/>
+      </svg>
+      <h1 id="install-title">A.P.E.X. <span>v9</span></h1>
+      <p id="install-sub">AI SECRETARY DASHBOARD</p>
+      <button id="install-btn">INSTALL APP</button>
+      <p id="install-hint">Pin to your taskbar for instant access</p>
+    </div>
+  </div>
+
+  <!-- APP SHELL -->
   <div id="app">
 
+    <!-- TOP BAR -->
     <header id="top-bar">
-      <span class="bar-label">A.P.E.X. v9</span>
+      <div id="tb-brand">
+        <svg viewBox="0 0 36 36" id="tb-hex-logo">
+          <polygon points="18,2 32,10 32,26 18,34 4,26 4,10" fill="#0a0a0a" stroke="#FF6B00" stroke-width="2"/>
+          <text x="18" y="23" font-family="'Arial Black',Impact,sans-serif" font-size="13" font-weight="900" fill="#FF6B00" text-anchor="middle">A</text>
+        </svg>
+        <span id="tb-title">A.P.E.X. <em>v9</em></span>
+      </div>
+
+      <div id="tb-center">
+        <div id="chat-mode-toggle">
+          <button class="mode-btn active" data-mode="focus">&#9670; FOCUS</button>
+          <div class="mode-sep"></div>
+          <button class="mode-btn" data-mode="full">&#9670; FULL</button>
+        </div>
+        <div id="view-title-bar"></div>
+      </div>
+
+      <div id="tb-right">
+        <div id="tb-clock">
+          <span id="tb-time">00:00:00</span>
+          <span id="tb-date">--- -- ---</span>
+        </div>
+        <div id="tb-status">
+          <span class="status-dot"></span>
+          <span class="status-label">ONLINE</span>
+        </div>
+      </div>
     </header>
 
     <div id="main">
 
+      <!-- LEFT BAR -->
       <aside id="left-bar">
-        <span class="bar-label">LEFT BAR</span>
+        <nav id="left-nav">
+          <button class="nav-btn active" data-view="chat">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+              <polygon points="12,2 21,7 21,17 12,22 3,17 3,7" stroke="currentColor" stroke-width="1.5" fill="none"/>
+              <line x1="8" y1="10" x2="16" y2="10" stroke="currentColor" stroke-width="1.2"/>
+              <line x1="8" y1="13" x2="14" y2="13" stroke="currentColor" stroke-width="1.2"/>
+            </svg>
+            <span>CHAT</span>
+          </button>
+
+          <button class="nav-btn" data-view="chat" data-new="true">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+              <polygon points="12,2 21,7 21,17 12,22 3,17 3,7" stroke="currentColor" stroke-width="1.5" fill="none"/>
+              <line x1="12" y1="8" x2="12" y2="16" stroke="currentColor" stroke-width="1.5"/>
+              <line x1="8" y1="12" x2="16" y2="12" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            <span>NEW CHAT</span>
+          </button>
+
+          <button class="nav-btn" data-view="email">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="5" width="20" height="14" rx="0" stroke="currentColor" stroke-width="1.5"/>
+              <polyline points="2,5 12,13 22,5" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            <span>EMAIL</span>
+          </button>
+
+          <button class="nav-btn" data-view="calendar">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+              <rect x="2" y="4" width="20" height="18" stroke="currentColor" stroke-width="1.5"/>
+              <line x1="2" y1="9" x2="22" y2="9" stroke="currentColor" stroke-width="1.2"/>
+              <line x1="7" y1="2" x2="7" y2="6" stroke="currentColor" stroke-width="1.5"/>
+              <line x1="17" y1="2" x2="17" y2="6" stroke="currentColor" stroke-width="1.5"/>
+              <rect x="6" y="13" width="3" height="3" fill="currentColor" opacity="0.6"/>
+              <rect x="10.5" y="13" width="3" height="3" fill="currentColor" opacity="0.6"/>
+              <rect x="15" y="13" width="3" height="3" fill="currentColor" opacity="0.6"/>
+            </svg>
+            <span>CALENDAR</span>
+          </button>
+        </nav>
+
+        <div id="left-nav-bottom">
+          <button class="nav-btn" data-view="settings">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"/>
+            </svg>
+            <span>SETTINGS</span>
+          </button>
+        </div>
       </aside>
 
+      <!-- CENTER -->
       <main id="center">
-        <span class="bar-label">CENTER CHAT SCREEN</span>
+
+        <!-- CHAT VIEW -->
+        <div id="view-chat" class="view active">
+          <canvas id="honeycomb-canvas"></canvas>
+
+          <!-- FOCUS MODE -->
+          <div id="mode-focus" class="chat-mode active">
+            <div id="apex-hex-wrap">
+              <svg id="apex-hex-large" class="apex-hex" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                  <radialGradient id="hglow" cx="50%" cy="50%" r="50%">
+                    <stop offset="0%" stop-color="#FF6B00" stop-opacity="0.12"/>
+                    <stop offset="100%" stop-color="#FF6B00" stop-opacity="0"/>
+                  </radialGradient>
+                </defs>
+                <polygon points="110,8 196,57 196,163 110,212 24,163 24,57" fill="url(#hglow)" stroke="#FF6B00" stroke-width="2.5" stroke-linejoin="miter"/>
+                <polygon points="110,22 182,64 182,156 110,198 38,156 38,64" fill="none" stroke="#FF6B00" stroke-width="0.8" opacity="0.3"/>
+                <polygon points="110,38 168,72 168,148 110,182 52,148 52,72" fill="none" stroke="#FF6B00" stroke-width="0.5" opacity="0.15"/>
+                <text x="110" y="100" font-family="'Arial Black',Impact,sans-serif" font-size="22" font-weight="900" fill="#FF6B00" text-anchor="middle" letter-spacing="3">A.P.E.X.</text>
+                <text x="110" y="122" font-family="'Courier New',monospace" font-size="11" fill="#FF6B00" text-anchor="middle" letter-spacing="6" opacity="0.8">v9</text>
+                <line x1="24" y1="110" x2="48" y2="110" stroke="#FF6B00" stroke-width="1.5" opacity="0.7"/>
+                <line x1="172" y1="110" x2="196" y2="110" stroke="#FF6B00" stroke-width="1.5" opacity="0.7"/>
+                <line x1="24" y1="104" x2="36" y2="104" stroke="#FF6B00" stroke-width="0.8" opacity="0.4"/>
+                <line x1="184" y1="104" x2="196" y2="104" stroke="#FF6B00" stroke-width="0.8" opacity="0.4"/>
+                <circle cx="110" cy="110" r="3" fill="#FF6B00" opacity="0.6"/>
+              </svg>
+            </div>
+            <div id="focus-text">
+              <p id="focus-response">SYSTEM READY — HOW CAN I ASSIST?</p>
+            </div>
+          </div>
+
+          <!-- FULL MODE -->
+          <div id="mode-full" class="chat-mode">
+            <div id="messages-scroll">
+              <div id="messages"></div>
+            </div>
+          </div>
+
+          <!-- CHAT INPUT -->
+          <div id="chat-input-bar">
+            <div id="chat-input-wrap">
+              <div class="input-corner tl"></div>
+              <div class="input-corner tr"></div>
+              <div class="input-corner bl"></div>
+              <div class="input-corner br"></div>
+              <input type="text" id="chat-input" placeholder="QUERY A.P.E.X." autocomplete="off" spellcheck="false" />
+              <button id="send-btn" aria-label="Send">
+                <svg viewBox="0 0 24 24" fill="none">
+                  <polygon points="2,12 22,4 14,22 11,13" stroke="#FF6B00" stroke-width="1.5" fill="none"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- EMAIL VIEW -->
+        <div id="view-email" class="view"></div>
+
+        <!-- CALENDAR VIEW -->
+        <div id="view-calendar" class="view"></div>
+
+        <!-- SETTINGS VIEW -->
+        <div id="view-settings" class="view"></div>
+
       </main>
 
+      <!-- RIGHT BAR - TASKS -->
       <aside id="right-bar">
-        <span class="bar-label">RIGHT BAR</span>
+        <div id="tasks-panel">
+          <div id="tasks-header">
+            <span class="panel-label">TASKS</span>
+            <button id="add-task-btn" title="Add task">+</button>
+          </div>
+          <div id="task-input-wrap" class="hidden">
+            <input type="text" id="task-input" placeholder="NEW TASK..." autocomplete="off" />
+          </div>
+          <div id="tasks-list"></div>
+        </div>
       </aside>
 
     </div>
-
   </div>
 
+  <script src="honeycomb.js"></script>
+  <script src="chat.js"></script>
+  <script src="email.js"></script>
+  <script src="calendar.js"></script>
+  <script src="settings.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

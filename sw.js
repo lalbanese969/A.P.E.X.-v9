@@ -1,17 +1,21 @@
-const CACHE = 'apex-v9-v1';
+const CACHE = 'apex-v9-v2';
 const ASSETS = [
   './index.html',
   './style.css',
   './app.js',
+  './honeycomb.js',
+  './chat.js',
+  './email.js',
+  './calendar.js',
+  './settings.js',
   './manifest.json',
   './icons/icon-192.svg',
   './icons/icon-512.svg'
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(cache => cache.addAll(ASSETS))
-  );
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
@@ -20,6 +24,7 @@ self.addEventListener('activate', e => {
       Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
     )
   );
+  self.clients.claim();
 });
 
 self.addEventListener('fetch', e => {
