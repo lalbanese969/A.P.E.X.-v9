@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0a0a0a"/>
+  <!-- Outer hexagon (pointy top) -->
+  <polygon points="256,26 455,141 455,371 256,486 57,371 57,141"
+           fill="#0a0a0a" stroke="#FF6B00" stroke-width="12" stroke-linejoin="miter"/>
+  <!-- Inner hexagon accent -->
+  <polygon points="256,56 425,155 425,357 256,456 87,357 87,155"
+           fill="none" stroke="#FF6B00" stroke-width="2.5" opacity="0.35"/>
+  <!-- Futuristic A -->
+  <text x="256" y="332"
+        font-family="'Arial Black','Impact',sans-serif"
+        font-size="234" font-weight="900"
+        fill="#FF6B00" text-anchor="middle">A</text>
+  <!-- Side accent ticks -->
+  <line x1="57" y1="256" x2="102" y2="256" stroke="#FF6B00" stroke-width="6"/>
+  <line x1="410" y1="256" x2="455" y2="256" stroke="#FF6B00" stroke-width="6"/>
+</svg>
