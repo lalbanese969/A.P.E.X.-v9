@@ -98,9 +98,9 @@ const HoneycombBg = (() => {
   }
 
   function resize() {
-    const p = canvas.parentElement;
-    w = canvas.width = p.clientWidth || p.offsetWidth || 800;
-    h = canvas.height = p.clientHeight || p.offsetHeight || 600;
+    const center = document.getElementById('center');
+    w = canvas.width = center.clientWidth;
+    h = canvas.height = center.clientHeight;
   }
 
   function init(el) {
