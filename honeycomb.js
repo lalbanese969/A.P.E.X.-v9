@@ -98,8 +98,9 @@ const HoneycombBg = (() => {
   }
 
   function resize() {
-    w = canvas.width = window.innerWidth - 200 - 220;
-    h = canvas.height = window.innerHeight - 56;
+    const c = document.getElementById('center');
+    w = canvas.width = c.offsetWidth;
+    h = canvas.height = c.offsetHeight;
   }
 
   function init(el) {

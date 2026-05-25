@@ -221,16 +221,15 @@ html, body {
 
 /* ── MAIN ROW ────────────────────────────────────────── */
 #main {
-  display: flex;
   flex: 1;
   min-height: 0;
+  display: grid;
+  grid-template-columns: var(--left-w) 1fr var(--right-w);
   overflow: hidden;
 }
 
 /* ── LEFT BAR ────────────────────────────────────────── */
 #left-bar {
-  width: var(--left-w);
-  min-width: var(--left-w);
   background: var(--bg);
   border-right: var(--border);
   box-shadow: 2px 0 20px rgba(255,107,0,0.05);
@@ -295,9 +294,6 @@ html, body {
   position: relative;
   background: var(--bg);
   overflow: hidden;
-  width: calc(100vw - var(--left-w) - var(--right-w));
-  height: calc(100vh - var(--top-h));
-  flex-shrink: 0;
 }
 
 /* ── VIEWS ───────────────────────────────────────────── */
@@ -941,8 +937,6 @@ html, body {
 
 /* ── RIGHT BAR - TASKS ───────────────────────────────── */
 #right-bar {
-  width: var(--right-w);
-  min-width: var(--right-w);
   background: var(--bg);
   border-left: var(--border);
   box-shadow: -2px 0 20px rgba(255,107,0,0.05);
