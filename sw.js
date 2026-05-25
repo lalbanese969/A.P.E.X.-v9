@@ -1,4 +1,4 @@
-const CACHE = 'apex-v9-v2';
+const CACHE = 'apex-v9-v3';
 const ASSETS = [
   './index.html',
   './style.css',

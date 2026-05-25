@@ -223,6 +223,7 @@ html, body {
 #main {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -291,11 +292,12 @@ html, body {
 
 /* ── CENTER ──────────────────────────────────────────── */
 #center {
-  flex: 1 1 auto;
-  min-width: 0;
-  background: var(--bg);
   position: relative;
+  background: var(--bg);
   overflow: hidden;
+  width: calc(100vw - var(--left-w) - var(--right-w));
+  height: calc(100vh - var(--top-h));
+  flex-shrink: 0;
 }
 
 /* ── VIEWS ───────────────────────────────────────────── */
