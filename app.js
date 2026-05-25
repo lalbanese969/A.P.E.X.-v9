@@ -129,21 +129,32 @@ let installPrompt = null;
 const overlay = document.getElementById('install-overlay');
 const installBtn = document.getElementById('install-btn');
 
-if (window.matchMedia('(display-mode: standalone)').matches) {
+function hideOverlay() {
+  localStorage.setItem('apex_overlay_dismissed', '1');
   overlay && overlay.classList.add('hidden');
 }
+
+// Hide if already dismissed, installed, or in standalone mode
+if (
+  localStorage.getItem('apex_overlay_dismissed') ||
+  window.matchMedia('(display-mode: standalone)').matches
+) {
+  overlay && overlay.classList.add('hidden');
+}
+
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   installPrompt = e;
 });
+
 installBtn && installBtn.addEventListener('click', async () => {
   if (installPrompt) {
     installPrompt.prompt();
     const { outcome } = await installPrompt.userChoice;
-    if (outcome === 'accepted') overlay && overlay.classList.add('hidden');
+    if (outcome === 'accepted') hideOverlay();
     installPrompt = null;
   } else {
-    overlay && overlay.classList.add('hidden');
+    hideOverlay();
   }
 });
 
