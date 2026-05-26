@@ -40,14 +40,14 @@ const SettingsView = (() => {
           </div>
           <div class="settings-row">
             <label class="settings-label">MODEL</label>
-            <input class="settings-input" id="s-gemini-model" type="text" placeholder="gemini-2.0-flash" value="${load('gemini_model') || 'gemini-2.0-flash'}"/>
+            <input class="settings-input" id="s-gemini-model" type="text" placeholder="gemini-2.0-flash-lite" value="${load('gemini_model') || 'gemini-2.0-flash-lite'}"/>
           </div>
           <div class="settings-row-btns">
             <button class="settings-save-btn" id="s-save-gemini">SAVE</button>
             <button class="settings-connect-btn" id="s-test-gemini">TEST CONNECTION</button>
           </div>
           <div class="settings-status" id="s-gemini-status">
-            ${load('gemini_key') ? '&#9679; KEY SAVED — ' + (load('gemini_model') || 'gemini-2.0-flash') : 'NO KEY SET'}
+            ${load('gemini_key') ? '&#9679; KEY SAVED — ' + (load('gemini_model') || 'gemini-2.0-flash-lite') : 'NO KEY SET'}
           </div>
         </div>
 
@@ -74,7 +74,7 @@ const SettingsView = (() => {
 
     container.querySelector('#s-save-gemini').addEventListener('click', () => {
       const key = container.querySelector('#s-gemini').value.trim();
-      const mdl = container.querySelector('#s-gemini-model').value.trim() || 'gemini-2.0-flash';
+      const mdl = container.querySelector('#s-gemini-model').value.trim() || 'gemini-2.0-flash-lite';
       save('gemini_key', key);
       save('gemini_model', mdl);
       const st = container.querySelector('#s-gemini-status');

@@ -1,5 +1,5 @@
 const AI = (() => {
-  const DEFAULT_MODEL = 'gemini-2.0-flash';
+  const DEFAULT_MODEL = 'gemini-2.0-flash-lite';
 
   const BASE_SYSTEM = `You are A.P.E.X. — Automated Personal Executive Assistant. You are a sharp, efficient AI secretary built into a personal dashboard. Be direct and concise. No markdown formatting unless the user asks for it. Get straight to the point.`;
 
@@ -41,7 +41,9 @@ const AI = (() => {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `Gemini API error ${res.status}`);
+      const msg = err?.error?.message || `Gemini API error ${res.status}`;
+      console.error('[APEX AI] sendToGemini failed:', res.status, err);
+      throw new Error(msg);
     }
 
     const data = await res.json();
@@ -51,13 +53,12 @@ const AI = (() => {
   }
 
   // Lightweight single-shot call — used by memory router and listener
-  // Always uses Flash (fastest/cheapest); ignores custom model setting
   async function callUtility(promptText) {
     const k = geminiKey();
     if (!k) throw new Error('No Gemini API key.');
 
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${k}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_MODEL}:generateContent?key=${k}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -70,6 +71,7 @@ const AI = (() => {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
+      console.error('[APEX AI] callUtility failed:', res.status, err);
       throw new Error(err?.error?.message || `Gemini utility error ${res.status}`);
     }
 
