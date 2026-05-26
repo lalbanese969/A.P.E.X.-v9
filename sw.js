@@ -1,4 +1,4 @@
-const CACHE = 'apex-v9-v3';
+const CACHE = 'apex-v9-v4';
 const ASSETS = [
   './index.html',
   './style.css',
@@ -28,7 +28,12 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // Network-first: always try network, cache result, fall back to cache if offline
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    fetch(e.request).then(res => {
+      const copy = res.clone();
+      caches.open(CACHE).then(c => c.put(e.request, copy));
+      return res;
+    }).catch(() => caches.match(e.request))
   );
 });

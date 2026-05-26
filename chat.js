@@ -1,14 +1,12 @@
 const Chat = (() => {
   const APEX_SVG_SMALL = `
     <svg class="apex-hex-small" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="40,4 70,21 70,59 40,76 10,59 10,21"
-               fill="#0a0a0a" stroke="#FF6B00" stroke-width="2" stroke-linejoin="miter"/>
-      <polygon points="40,12 62,25 62,55 40,68 18,55 18,25"
-               fill="none" stroke="#FF6B00" stroke-width="0.8" opacity="0.3"/>
-      <text x="40" y="44" font-family="'Arial Black',Impact,sans-serif"
-            font-size="14" font-weight="900" fill="#FF6B00" text-anchor="middle">A</text>
-      <text x="40" y="56" font-family="'Courier New',monospace"
-            font-size="7" fill="#FF6B00" text-anchor="middle" letter-spacing="2" opacity="0.7">P.E.X</text>
+      <polygon points="40,4 70,21 70,59 40,76 10,59 10,21" fill="#0d0d0d"/>
+      <g class="hex-rotate">
+        <polygon points="40,4 70,21 70,59 40,76 10,59 10,21" fill="none" stroke="#FF6B00" stroke-width="4" stroke-linejoin="miter"/>
+        <polygon points="40,10 64,24 64,56 40,70 16,56 16,24" fill="none" stroke="#FF6B00" stroke-width="0.8" opacity="0.25"/>
+      </g>
+      <text x="40" y="45" font-family="'Orbitron','Arial Black',sans-serif" font-size="11" font-weight="900" fill="#FF6B00" text-anchor="middle" letter-spacing="1">APEX</text>
     </svg>`;
 
   let messages = [];

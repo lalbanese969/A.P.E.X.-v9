@@ -48,14 +48,14 @@ const HoneycombBg = (() => {
 
     ctx.clearRect(0, 0, w, h);
 
-    const cols = Math.ceil(w / COL_W) + 2;
-    const rows = Math.ceil(h / ROW_H) + 2;
+    const halfCols = Math.ceil(w / (2 * COL_W)) + 1;
+    const halfRows = Math.ceil(h / (2 * ROW_H)) + 1;
 
-    for (let row = -1; row < rows; row++) {
-      for (let col = -1; col < cols; col++) {
+    for (let row = -halfRows; row <= halfRows; row++) {
+      for (let col = -halfCols; col <= halfCols; col++) {
         const offset = (row % 2 !== 0) ? COL_W * 0.5 : 0;
-        const cx = col * COL_W + offset;
-        const cy = row * ROW_H;
+        const cx = col * COL_W + offset + w / 2;
+        const cy = row * ROW_H + h / 2;
 
         const nx = cx / w, ny = cy / h;
         let glow = 0;
