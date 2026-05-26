@@ -70,10 +70,25 @@ const Chat = (() => {
 
     setThinking(true);
 
+    // Step 1 — Router: retrieve relevant memories before calling main AI
+    let memoryContext = '';
+    if (typeof Memory !== 'undefined') {
+      const routerResult = await Memory.router(val).catch(() => null);
+      if (routerResult?.relevant?.length) {
+        const facts = Memory.getFactsById(routerResult.relevant);
+        memoryContext = facts.map(f => f.content).join('\n');
+      }
+    }
+
+    // Step 2 — Main AI call with injected memory context
     try {
-      const reply = await AI.send(messages);
+      const reply = await AI.send(messages, memoryContext || undefined);
       setThinking(false);
       apexReply(reply);
+
+      // Step 3 — Listener: extract and save new memories (fire-and-forget)
+      if (typeof Memory !== 'undefined') Memory.runListener(val, reply);
+
     } catch (err) {
       setThinking(false);
       apexReply(`ERROR — ${err.message}`);
@@ -103,7 +118,7 @@ const Chat = (() => {
     renderMessages();
   }
 
-  function init() {
+  function init(greeting) {
     const s = sendBtn();
     const inp = input();
     s && s.addEventListener('click', send);
@@ -114,7 +129,10 @@ const Chat = (() => {
     });
 
     const r = focusResponse();
-    if (r) r.classList.add('empty');
+    if (r) {
+      r.textContent = greeting || 'SYSTEM READY — HOW CAN I ASSIST?';
+      r.classList.add('empty');
+    }
   }
 
   return { init, newChat, setMode };

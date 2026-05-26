@@ -125,7 +125,15 @@ renderTasks();
 
 // ── INIT ─────────────────────────────────────────────
 HoneycombBg.init(document.getElementById('honeycomb-canvas'));
-Chat.init();
+
+let _startupGreeting;
+if (typeof Memory !== 'undefined') {
+  const _birthdays = Memory.init();
+  if (_birthdays.length) {
+    _startupGreeting = `SYSTEM READY — Today is ${_birthdays.join(' & ')}'s birthday.`;
+  }
+}
+Chat.init(_startupGreeting);
 EmailView.init();
 CalendarView.init();
 SettingsView.init();

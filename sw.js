@@ -1,9 +1,10 @@
-const CACHE = 'apex-v9-v5';
+const CACHE = 'apex-v9-v6';
 const ASSETS = [
   './index.html',
   './style.css',
   './app.js',
   './honeycomb.js',
+  './memory.js',
   './ai.js',
   './chat.js',
   './email.js',
