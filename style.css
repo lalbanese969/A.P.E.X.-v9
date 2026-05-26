@@ -172,15 +172,14 @@ html, body {
 }
 .apex-hex.thinking { animation: apex-think 1.8s ease-in-out infinite; }
 
-/* Ring always spins slowly — speeds up when thinking */
+/* Ring only spins when thinking */
 .hex-rotate {
   transform-box: fill-box;
   transform-origin: center;
-  animation: hex-ring-spin 14s linear infinite;
 }
 .apex-hex.thinking .hex-rotate,
 .apex-hex-small.thinking .hex-rotate {
-  animation: hex-ring-spin 3.5s linear infinite;
+  animation: hex-ring-spin 8s linear infinite;
 }
 
 @keyframes apex-idle {
