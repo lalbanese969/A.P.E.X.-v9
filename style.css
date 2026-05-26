@@ -176,6 +176,7 @@ html, body {
 .hex-rotate {
   transform-box: fill-box;
   transform-origin: center;
+  transform: rotate(30deg);
 }
 .apex-hex.thinking .hex-rotate,
 .apex-hex-small.thinking .hex-rotate {
@@ -194,8 +195,8 @@ html, body {
   100% { filter: drop-shadow(0 0 16px rgba(255,106,0,0.6)); transform: scale(1);    }
 }
 @keyframes hex-ring-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+  from { transform: rotate(30deg); }
+  to   { transform: rotate(390deg); }
 }
 
 #focus-text { text-align: center; max-width: 480px; padding: 0 20px; }
