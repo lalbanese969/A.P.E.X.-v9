@@ -8,9 +8,14 @@ const Chat = (() => {
       <text x="40" y="45" font-family="'Orbitron','Arial Black',sans-serif" font-size="11" font-weight="900" fill="#FF6B00" text-anchor="middle" letter-spacing="1">APEX</text>
     </svg>`;
 
-  let messages = [];
+  const MSG_KEY = 'apex_chat_messages';
+  let messages = (() => { try { return JSON.parse(localStorage.getItem(MSG_KEY) || '[]'); } catch { return []; } })();
   let mode = 'focus';
   let thinking = false;
+
+  function saveMessages() {
+    try { localStorage.setItem(MSG_KEY, JSON.stringify(messages.slice(-120))); } catch {}
+  }
 
   const focusHex = () => document.getElementById('apex-hex-large');
   const focusResponse = () => document.getElementById('focus-response');
@@ -53,6 +58,7 @@ const Chat = (() => {
 
   function apexReply(text) {
     messages.push({ role: 'apex', text });
+    saveMessages();
     if (mode === 'focus') {
       const r = focusResponse();
       if (r) { r.textContent = text; r.classList.remove('empty'); }
@@ -66,6 +72,7 @@ const Chat = (() => {
     input().value = '';
 
     messages.push({ role: 'user', text: val });
+    saveMessages();
     if (mode === 'full') renderMessages();
 
     setThinking(true);
@@ -106,6 +113,7 @@ const Chat = (() => {
     if (m === 'full') {
       if (messages.length === 0) {
         messages.push({ role: 'apex', text: 'SYSTEM READY — HOW CAN I ASSIST?' });
+        saveMessages();
       }
       renderMessages();
     }
@@ -113,6 +121,7 @@ const Chat = (() => {
 
   function newChat() {
     messages = [];
+    saveMessages();
     const r = focusResponse();
     if (r) { r.textContent = 'SYSTEM READY — HOW CAN I ASSIST?'; r.classList.add('empty'); }
     renderMessages();

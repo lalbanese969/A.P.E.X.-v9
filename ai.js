@@ -8,11 +8,14 @@ const AI = (() => {
   const ollamaUrl   = () => localStorage.getItem('apex_ollama_url')   || 'http://localhost:11434';
   const ollamaModel = () => localStorage.getItem('apex_ollama_model') || 'llama3';
 
-  // Build the system prompt — injects people block + any retrieved memory context
+  // Build the system prompt — always injects people + recent facts, plus any router-retrieved context
   function buildSystem(memoryContext) {
-    const people = (typeof Memory !== 'undefined') ? '\n\n' + Memory.buildPeopleBlock() : '';
-    const mem    = memoryContext ? `\n\nRELEVANT MEMORIES:\n${memoryContext}` : '';
-    return BASE_SYSTEM + people + mem;
+    if (typeof Memory === 'undefined') return BASE_SYSTEM + (memoryContext ? `\n\nCONTEXT:\n${memoryContext}` : '');
+    const people  = '\n\n' + Memory.buildPeopleBlock();
+    const recent  = Memory.getRecentFacts();
+    const recentPart = recent ? `\n\nWHAT I REMEMBER:\n${recent}` : '';
+    const mem     = memoryContext ? `\n\nADDITIONAL CONTEXT:\n${memoryContext}` : '';
+    return BASE_SYSTEM + people + recentPart + mem;
   }
 
   function toGeminiContents(msgs) {

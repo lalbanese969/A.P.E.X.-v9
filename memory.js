@@ -37,8 +37,14 @@ const Memory = (() => {
     const facts = getGeneral();
     if (!facts.length) return 'None.';
     return facts.slice(-20)
-      .map(f => `[${(f.tags||[]).join(',')||'general'}] ${(f.content||'').slice(0,120)}`)
+      .map(f => `id:${f.id} [${(f.tags||[]).join(',')||'general'}] ${(f.content||'').slice(0,120)}`)
       .join('\n');
+  }
+
+  function getRecentFacts() {
+    const facts = getGeneral();
+    if (!facts.length) return '';
+    return facts.slice(-30).map(f => `- ${f.content}`).join('\n');
   }
 
   function getPeopleSummary() {
@@ -215,7 +221,7 @@ Rules:
 
   return {
     init, router, runListener,
-    buildPeopleBlock, getFactsById,
+    buildPeopleBlock, getRecentFacts, getFactsById,
     getGeneral, getPeople, getUser, getConfig,
     applyOps
   };
