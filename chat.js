@@ -4,7 +4,6 @@ const Chat = (() => {
       <polygon points="40,4 70,21 70,59 40,76 10,59 10,21" fill="#0d0d0d"/>
       <g class="hex-rotate">
         <polygon points="40,4 70,21 70,59 40,76 10,59 10,21" fill="none" stroke="#FF6B00" stroke-width="4" stroke-linejoin="miter"/>
-        <polygon points="40,10 64,24 64,56 40,70 16,56 16,24" fill="none" stroke="#FF6B00" stroke-width="0.8" opacity="0.25"/>
       </g>
       <text x="40" y="45" font-family="'Orbitron','Arial Black',sans-serif" font-size="11" font-weight="900" fill="#FF6B00" text-anchor="middle" letter-spacing="1">APEX</text>
     </svg>`;

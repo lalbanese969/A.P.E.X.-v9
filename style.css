@@ -177,9 +177,11 @@ html, body {
   transform-box: fill-box;
   transform-origin: center;
 }
-.apex-hex.thinking .hex-rotate,
+.apex-hex.thinking .hex-rotate {
+  animation: hex-ring-spin 4s linear infinite;
+}
 .apex-hex-small.thinking .hex-rotate {
-  animation: hex-ring-spin 1.8s linear infinite;
+  animation: hex-ring-spin 4s linear infinite;
 }
 
 @keyframes apex-idle {
@@ -187,8 +189,11 @@ html, body {
   50%      { filter: drop-shadow(0 0 28px rgba(255,107,0,0.9)); }
 }
 @keyframes apex-think {
-  0%,100% { filter: drop-shadow(0 0 12px rgba(255,107,0,0.6)); }
-  50%     { filter: drop-shadow(0 0 35px rgba(255,107,0,1.0)); }
+  0%   { filter: drop-shadow(0 0 12px rgba(255,107,0,0.5)); transform: scale(1);    }
+  25%  { filter: drop-shadow(0 0 38px rgba(255,107,0,1.0)); transform: scale(1.06); }
+  50%  { filter: drop-shadow(0 0 14px rgba(255,107,0,0.6)); transform: scale(0.94); }
+  75%  { filter: drop-shadow(0 0 36px rgba(255,107,0,1.0)); transform: scale(1.04); }
+  100% { filter: drop-shadow(0 0 12px rgba(255,107,0,0.5)); transform: scale(1);    }
 }
 @keyframes hex-ring-spin {
   from { transform: rotate(0deg); }

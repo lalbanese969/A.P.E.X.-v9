@@ -1,8 +1,9 @@
 const HoneycombBg = (() => {
-  const R = 50;
+  const R = 102;  // matches the APEX SVG hex polygon radius
   const COL_W = Math.sqrt(3) * R;
   const ROW_H = R * 1.5;
   let canvas, ctx, w, h, blobs = [], lastTime = 0;
+  let originX = 0, originY = 0;
 
   function initBlobs() {
     blobs = Array.from({ length: 4 }, (_, i) => ({
@@ -54,8 +55,8 @@ const HoneycombBg = (() => {
     for (let row = -halfRows; row <= halfRows; row++) {
       for (let col = -halfCols; col <= halfCols; col++) {
         const offset = (row % 2 !== 0) ? COL_W * 0.5 : 0;
-        const cx = col * COL_W + offset + w / 2;
-        const cy = row * ROW_H + h / 2;
+        const cx = col * COL_W + offset + originX;
+        const cy = row * ROW_H + originY;
 
         const nx = cx / w, ny = cy / h;
         let glow = 0;
@@ -101,6 +102,21 @@ const HoneycombBg = (() => {
     const c = document.getElementById('center');
     w = canvas.width = c.offsetWidth;
     h = canvas.height = c.offsetHeight;
+
+    // Align grid origin with the center of the APEX hex element
+    const hexWrap = document.getElementById('apex-hex-wrap');
+    if (hexWrap) {
+      const cr = canvas.getBoundingClientRect();
+      const hr = hexWrap.getBoundingClientRect();
+      if (hr.width > 0) {
+        originX = hr.left - cr.left + hr.width / 2;
+        originY = hr.top - cr.top + hr.height / 2;
+      } else {
+        originX = w / 2; originY = h / 2;
+      }
+    } else {
+      originX = w / 2; originY = h / 2;
+    }
   }
 
   function init(el) {
