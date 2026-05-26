@@ -42,14 +42,11 @@ const SettingsView = (() => {
             <label class="settings-label">MODEL</label>
             <select class="settings-input settings-select" id="s-gemini-model">
               ${[
-                ['gemini-2.0-flash-lite',  'Gemini 2.0 Flash Lite  — fastest, cheapest'],
-                ['gemini-2.0-flash',       'Gemini 2.0 Flash       — fast, balanced'],
-                ['gemini-2.5-flash',       'Gemini 2.5 Flash       — smarter, fast'],
+                ['gemini-2.5-flash-lite',  'Gemini 2.5 Flash Lite  — fastest, cheapest'],
+                ['gemini-2.5-flash',       'Gemini 2.5 Flash       — fast, balanced'],
                 ['gemini-2.5-pro',         'Gemini 2.5 Pro         — most capable'],
-                ['gemini-1.5-flash',       'Gemini 1.5 Flash       — older, reliable'],
-                ['gemini-1.5-pro',         'Gemini 1.5 Pro         — older, powerful'],
               ].map(([val, label]) =>
-                `<option value="${val}"${(load('gemini_model')||'gemini-2.0-flash-lite') === val ? ' selected' : ''}>${label}</option>`
+                `<option value="${val}"${(load('gemini_model')||'gemini-2.5-flash-lite') === val ? ' selected' : ''}>${label}</option>`
               ).join('')}
             </select>
           </div>
