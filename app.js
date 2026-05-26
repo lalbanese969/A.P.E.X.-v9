@@ -69,7 +69,13 @@ function renderTasks() {
   const list = document.getElementById('tasks-list');
   if (!list) return;
   if (tasks.length === 0) {
-    list.innerHTML = '<div class="tasks-empty">NO TASKS<br/>PRESS + TO ADD</div>';
+    list.innerHTML = `<div class="tasks-empty">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 12l2 2 4-4"/>
+      </svg>
+      <span>No tasks yet</span>
+      <span style="font-size:0.72rem;opacity:0.5">Press + to add one</span>
+    </div>`;
     return;
   }
   list.innerHTML = tasks.map((t, i) => `
