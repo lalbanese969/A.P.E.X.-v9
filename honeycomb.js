@@ -20,7 +20,7 @@ const HoneycombBg = (() => {
   function hexPath(cx, cy, r) {
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
-      const a = (Math.PI / 180) * (60 * i);
+      const a = (Math.PI / 180) * (60 * i + 30);
       const px = cx + r * Math.cos(a);
       const py = cy + r * Math.sin(a);
       i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
