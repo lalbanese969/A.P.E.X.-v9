@@ -70,10 +70,14 @@ const Chat = (() => {
 
     setThinking(true);
 
-    await new Promise(r => setTimeout(r, 1400 + Math.random() * 800));
-    setThinking(false);
-
-    apexReply(`[APEX] Received: "${val}" — AI integration coming soon.`);
+    try {
+      const reply = await AI.send(messages);
+      setThinking(false);
+      apexReply(reply);
+    } catch (err) {
+      setThinking(false);
+      apexReply(`ERROR — ${err.message}`);
+    }
   }
 
   function setMode(m) {

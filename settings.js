@@ -35,14 +35,19 @@ const SettingsView = (() => {
         <div class="settings-section">
           <div class="settings-section-title">AI — GEMINI</div>
           <div class="settings-row">
-            <label class="settings-label">GEMINI API KEY</label>
+            <label class="settings-label">API KEY</label>
             <input class="settings-input" id="s-gemini" type="password" placeholder="AIza..." value="${load('gemini_key')}"/>
           </div>
+          <div class="settings-row">
+            <label class="settings-label">MODEL</label>
+            <input class="settings-input" id="s-gemini-model" type="text" placeholder="gemini-2.0-flash" value="${load('gemini_model') || 'gemini-2.0-flash'}"/>
+          </div>
           <div class="settings-row-btns">
-            <button class="settings-save-btn" id="s-save-gemini">SAVE KEY</button>
+            <button class="settings-save-btn" id="s-save-gemini">SAVE</button>
+            <button class="settings-connect-btn" id="s-test-gemini">TEST CONNECTION</button>
           </div>
           <div class="settings-status" id="s-gemini-status">
-            ${load('gemini_key') ? '&#9679; KEY SAVED' : 'NO KEY SET'}
+            ${load('gemini_key') ? '&#9679; KEY SAVED — ' + (load('gemini_model') || 'gemini-2.0-flash') : 'NO KEY SET'}
           </div>
         </div>
 
@@ -68,11 +73,27 @@ const SettingsView = (() => {
     `;
 
     container.querySelector('#s-save-gemini').addEventListener('click', () => {
-      const val = container.querySelector('#s-gemini').value.trim();
-      save('gemini_key', val);
+      const key = container.querySelector('#s-gemini').value.trim();
+      const mdl = container.querySelector('#s-gemini-model').value.trim() || 'gemini-2.0-flash';
+      save('gemini_key', key);
+      save('gemini_model', mdl);
       const st = container.querySelector('#s-gemini-status');
-      st.textContent = val ? '● KEY SAVED' : 'NO KEY SET';
-      st.className = 'settings-status' + (val ? ' connected' : '');
+      st.textContent = key ? `● KEY SAVED — ${mdl}` : 'NO KEY SET';
+      st.className = 'settings-status' + (key ? ' connected' : '');
+    });
+
+    container.querySelector('#s-test-gemini').addEventListener('click', async () => {
+      const st = container.querySelector('#s-gemini-status');
+      st.textContent = 'TESTING...';
+      st.className = 'settings-status';
+      try {
+        const reply = await AI.sendToGemini([{ role: 'user', text: 'Reply with exactly: "APEX online."' }]);
+        st.textContent = '● ' + reply.trim();
+        st.className = 'settings-status connected';
+      } catch (e) {
+        st.textContent = '✕ ' + e.message;
+        st.className = 'settings-status';
+      }
     });
 
     container.querySelector('#s-save-ollama').addEventListener('click', () => {
