@@ -16,7 +16,12 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
+  // Use individual adds so one missing file doesn't kill the whole install
+  e.waitUntil(
+    caches.open(CACHE).then(c =>
+      Promise.allSettled(ASSETS.map(a => c.add(a)))
+    )
+  );
   self.skipWaiting();
 });
 
