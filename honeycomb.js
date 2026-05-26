@@ -1,5 +1,5 @@
 const HoneycombBg = (() => {
-  const R = 102;  // matches the APEX SVG hex polygon radius
+  const R = 50;
   const COL_W = Math.sqrt(3) * R;
   const ROW_H = R * 1.5;
   let canvas, ctx, w, h, blobs = [], lastTime = 0;
