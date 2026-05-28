@@ -16,9 +16,9 @@ const Memory = (() => {
   };
 
   const DEFAULT_CONFIG = {
-    humor:     7,
-    formality: 3,
-    traits:    ['witty', 'direct', 'loyal', 'perceptive'],
+    humor:     8,
+    formality: 2,
+    traits:    ['witty', 'sharp', 'loyal', 'perceptive', 'a bit sarcastic'],
     notes:     ''
   };
 
@@ -156,8 +156,63 @@ Health note: ${u.health}`;
     return text;
   }
 
-  // ── STARTUP GREETING ──────────────────────────────────────────────────────
-  // Pre-fired immediately on app load so the greeting is ready instantly.
+  // ── TODAY CONTEXT (for startup briefing) ─────────────────────────────────
+  async function fetchTodayContext() {
+    if (typeof Auth === 'undefined') return '';
+    const parts = [];
+    const now = new Date();
+    const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
+    const todayEnd   = new Date(now); todayEnd.setHours(23,59,59,999);
+
+    if (Auth.Google.isConnected()) {
+      try {
+        const token = await Auth.Google.getToken();
+        const [calRes, labelRes, listRes] = await Promise.all([
+          fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${todayStart.toISOString()}&timeMax=${todayEnd.toISOString()}&orderBy=startTime&singleEvents=true&maxResults=10`, { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('https://gmail.googleapis.com/gmail/v1/users/me/labels/INBOX', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=5&q=is:unread+in:inbox', { headers: { Authorization: `Bearer ${token}` } })
+        ]);
+
+        if (calRes.ok) {
+          const calData = await calRes.json();
+          const evs = (calData.items || []).filter(e => e.status !== 'cancelled');
+          if (evs.length) {
+            const list = evs.map(e => {
+              const t = e.start.dateTime ? new Date(e.start.dateTime).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'}) : 'all day';
+              return `${t} ${e.summary}`;
+            }).join(', ');
+            parts.push(`TODAY'S EVENTS: ${list}`);
+          } else {
+            parts.push('TODAY\'S EVENTS: nothing scheduled');
+          }
+        }
+
+        if (labelRes.ok) {
+          const lData = await labelRes.json();
+          parts.push(`UNREAD EMAILS: ${lData.messagesUnread || 0}`);
+        }
+
+        if (listRes.ok) {
+          const lRes = await listRes.json();
+          if (lRes.messages?.length) {
+            const details = await Promise.all(lRes.messages.slice(0,4).map(m =>
+              fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=From,Subject`, { headers: { Authorization: `Bearer ${token}` } }).then(r => r.json())
+            ));
+            const summaries = details.map(msg => {
+              const hdr = n => (msg.payload?.headers||[]).find(h=>h.name===n)?.value||'';
+              return `"${hdr('Subject')}" from ${hdr('From').replace(/<[^>]+>/,'').trim()}`;
+            }).join('; ');
+            parts.push(`TOP UNREAD: ${summaries}`);
+          }
+        }
+      } catch {}
+    }
+
+    return parts.join('\n');
+  }
+
+  // ── STARTUP BRIEFING ──────────────────────────────────────────────────────
+  // Fired immediately on app load — scans calendar + email for a real briefing.
   let _greetingPromise = null;
 
   function prewarmGreeting() {
@@ -167,23 +222,27 @@ Health note: ${u.health}`;
     const period = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
     const name   = getUser().address_as;
     const bdays  = checkBirthdays();
-    const bdNote = bdays.length ? ` Also note: today is ${bdays.join(' and ')}'s birthday.` : '';
+    const bdNote = bdays.length ? `\nNOTE: Today is ${bdays.join(' and ')}'s birthday.` : '';
 
-    const prompt = `Generate a brief ${period} greeting for ${name}.${bdNote}
-Rules: Jarvis-style. Max 2 sentences. Do NOT open with "Good ${period}" — find a more interesting opener. Be punchy, maybe slightly witty. End with a one-clause offer to help. Address as "${name}". No markdown. No lists.`;
+    _greetingPromise = fetchTodayContext().catch(() => '').then(context => {
+      const hasContext = !!context.trim();
+      const prompt = `You are APEX, Luke's personal secretary. Generate his ${period} briefing.
+${hasContext ? `\nTODAY'S DATA:\n${context}` : ''}${bdNote}
 
-    _greetingPromise = AI.sendToGemini(
-      [{ role: 'user', text: prompt }],
-      buildPersonaBlock()
-    ).then(text => processReply(text))
-     .catch(() => {
-       const fallback = {
-         morning:   `Morning, ${name}. What are we dealing with today?`,
-         afternoon: `Afternoon, ${name}. What do you need?`,
-         evening:   `Evening, ${name}. Ready when you are.`
-       };
-       return fallback[period];
-     });
+Rules:
+- Jarvis-style. Max 2-3 sentences.
+- Be SPECIFIC — mention actual event names, times, and email senders if available.
+- If there are emails needing attention, say so and offer to draft.
+- If calendar is empty and inbox is quiet, say so wittily.
+- Do NOT start with "Good ${period}". Find a more interesting opener.
+- Punchy, maybe slightly sarcastic. Address as "${name}". No markdown.`;
+
+      return AI.sendToGemini([{ role: 'user', text: prompt }], buildPersonaBlock())
+        .then(t => processReply(t));
+    }).catch(() => {
+      const f = { morning: `Morning, ${name}. What are we dealing with today?`, afternoon: `Afternoon, ${name}. What do you need?`, evening: `Evening, ${name}. Ready when you are.` };
+      return f[period];
+    });
 
     return _greetingPromise;
   }
@@ -340,7 +399,7 @@ Rules:
   }
 
   return {
-    init, router, runListener, processReply, prewarmGreeting,
+    init, router, runListener, processReply, prewarmGreeting, parseJSON,
     buildFullSystem, buildPersonaBlock, buildPeopleBlock,
     getRecentFacts, getFactsById,
     getGeneral, getPeople, getUser, getConfig, applyOps

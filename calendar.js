@@ -1,12 +1,42 @@
 const CalendarView = (() => {
+  const HOUR_H     = 64;   // px per hour
+  const GRID_START = 6;    // 6 AM
+  const GRID_END   = 23;   // 11 PM
+  const HOURS      = GRID_END - GRID_START;
+
   const DAYS_SHORT = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-  const MONTHS = ['January','February','March','April','May','June',
-                  'July','August','September','October','November','December'];
+  const MONTHS     = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
-  let weekOffset = 0;
-  let _container = null;
-  let _eventsCache = {};  // key: weekStart ISO -> events map
+  const DEFAULT_COLOR = '#1a73e8';
 
+  const DEFAULT_CATEGORIES = [
+    { name:'Lunch / Dinner', keywords:['lunch','dinner','brunch','breakfast','food','restaurant'], color:'#0f9d58' },
+    { name:'Client',         keywords:['client','prospect','sales','demo','pitch','deal'],          color:'#616161' },
+    { name:'Meeting',        keywords:['meeting','sync','standup','sprint','review','planning','call','interview','1:1'], color:'#3f51b5' },
+    { name:'Personal',       keywords:['personal','family','home','doctor','dentist','appointment'], color:'#7986cb' },
+    { name:'Exercise',       keywords:['gym','workout','yoga','run','exercise','training','sport'],  color:'#e67c73' },
+  ];
+
+  let weekOffset  = 0;
+  let _container  = null;
+  let _cache      = {};
+  let _nowTimer   = null;
+
+  // ── CATEGORIES ────────────────────────────────────────────────────────────
+  function getCategories() {
+    try { return JSON.parse(localStorage.getItem('apex_categories') || 'null') || DEFAULT_CATEGORIES; }
+    catch { return DEFAULT_CATEGORIES; }
+  }
+
+  function getEventColor(title) {
+    const lower = (title || '').toLowerCase();
+    for (const cat of getCategories()) {
+      if ((cat.keywords || []).some(k => lower.includes(k.toLowerCase()))) return cat.color;
+    }
+    return DEFAULT_COLOR;
+  }
+
+  // ── HELPERS ───────────────────────────────────────────────────────────────
   function getSunday(offset = 0) {
     const d = new Date();
     d.setDate(d.getDate() - d.getDay() + offset * 7);
@@ -14,175 +44,273 @@ const CalendarView = (() => {
     return d;
   }
 
-  function fmtTime(dateStr) {
-    if (!dateStr) return 'All day';
+  function fmt12(dateStr) {
+    return new Date(dateStr).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function topPx(dateStr) {
     const d = new Date(dateStr);
-    return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    return Math.max(0, ((d.getHours() - GRID_START) * 60 + d.getMinutes()) / 60 * HOUR_H);
   }
 
-  // ── GOOGLE CALENDAR FETCH ─────────────────────────────────────────────────
-  async function fetchGoogleEvents(timeMin, timeMax) {
+  function heightPx(s, e) {
+    return Math.max(22, (new Date(e) - new Date(s)) / 3600000 * HOUR_H);
+  }
+
+  function nowTopPx() {
+    const d = new Date();
+    return ((d.getHours() - GRID_START) * 60 + d.getMinutes()) / 60 * HOUR_H;
+  }
+
+  // ── API FETCH ─────────────────────────────────────────────────────────────
+  async function fetchGoogle(tMin, tMax) {
     const token = await Auth.Google.getToken();
-    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events`
-      + `?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}`
-      + `&orderBy=startTime&singleEvents=true&maxResults=50`;
-    const r = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    if (!r.ok) throw new Error(`Google Calendar ${r.status}`);
-    const data = await r.json();
-    return (data.items || []).map(ev => ({
-      title: ev.summary || '(no title)',
-      start: ev.start.dateTime || ev.start.date,
-      allDay: !ev.start.dateTime
-    }));
+    const r = await fetch(
+      `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(tMin)}&timeMax=${encodeURIComponent(tMax)}&orderBy=startTime&singleEvents=true&maxResults=100`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    if (!r.ok) throw new Error(`GCal ${r.status}`);
+    const d = await r.json();
+    return (d.items || []).filter(e => e.status !== 'cancelled');
   }
 
-  // ── MICROSOFT CALENDAR FETCH ──────────────────────────────────────────────
-  async function fetchMsEvents(timeMin, timeMax) {
+  async function fetchOutlook(tMin, tMax) {
     const token = await Auth.Microsoft.getToken();
-    const url = `https://graph.microsoft.com/v1.0/me/calendarView`
-      + `?startDateTime=${timeMin}&endDateTime=${timeMax}`
-      + `&$orderby=start/dateTime&$select=subject,start,end,isAllDay&$top=50`;
-    const r = await fetch(url, {
-      headers: { Authorization: `Bearer ${token}`, Prefer: 'outlook.timezone="UTC"' }
-    });
-    if (!r.ok) throw new Error(`Outlook Calendar ${r.status}`);
-    const data = await r.json();
-    return (data.value || []).map(ev => ({
-      title: ev.subject || '(no title)',
-      start: ev.start?.dateTime || ev.start?.date,
-      allDay: !!ev.isAllDay
+    const r = await fetch(
+      `https://graph.microsoft.com/v1.0/me/calendarView?startDateTime=${tMin}&endDateTime=${tMax}&$orderby=start/dateTime&$select=subject,start,end,isAllDay,description,location&$top=100`,
+      { headers: { Authorization: `Bearer ${token}`, Prefer: 'outlook.timezone="UTC"' } }
+    );
+    if (!r.ok) throw new Error(`Graph ${r.status}`);
+    const d = await r.json();
+    return (d.value || []).map(e => ({
+      summary:     e.subject || '(no title)',
+      start:       { dateTime: e.isAllDay ? null : e.start?.dateTime, date: e.isAllDay ? e.start?.dateTime?.split('T')[0] : null },
+      end:         { dateTime: e.isAllDay ? null : e.end?.dateTime,   date: e.isAllDay ? e.end?.dateTime?.split('T')[0]   : null },
+      description: (e.body?.content || '').replace(/<[^>]+>/g, '').slice(0, 300),
+      location:    e.location?.displayName || ''
     }));
   }
 
-  // ── BUILD EVENTS MAP ──────────────────────────────────────────────────────
-  // Returns { 0: [{title,type}], 1: [...], ... } indexed by day of week (0=Sun)
-  function buildDayMap(rawEvents, sunday) {
-    const map = {};
-    for (const ev of rawEvents) {
-      if (!ev.start) continue;
-      const start = new Date(ev.start);
-      const startMid = new Date(start); startMid.setHours(0,0,0,0);
-      const idx = Math.round((startMid - sunday) / 86400000);
-      if (idx < 0 || idx > 6) continue;
-      if (!map[idx]) map[idx] = [];
-      const label = ev.allDay ? `All day  ${ev.title}` : `${fmtTime(ev.start)}  ${ev.title}`;
-      map[idx].push({ title: label, type: 'filled' });
+  async function loadWeek(sunday) {
+    const key  = sunday.toISOString();
+    if (_cache[key]) return _cache[key];
+    const tMin = sunday.toISOString();
+    const tMax = new Date(sunday.getTime() + 7 * 86400000).toISOString();
+    let events = [];
+    if (typeof Auth !== 'undefined') {
+      if (Auth.Google.isConnected())    try { events.push(...await fetchGoogle(tMin, tMax));  } catch(e) { console.warn('[Cal] Google:', e.message); }
+      if (Auth.Microsoft.isConnected()) try { events.push(...await fetchOutlook(tMin, tMax)); } catch(e) { console.warn('[Cal] Outlook:', e.message); }
     }
-    return map;
+    _cache[key] = events;
+    return events;
   }
 
-  async function loadEvents(sunday) {
-    const timeMin = sunday.toISOString();
-    const timeMax = new Date(sunday.getTime() + 7 * 86400000).toISOString();
-    const raw = [];
+  // ── EVENT POPUP ───────────────────────────────────────────────────────────
+  function showPopup(ev, rect) {
+    document.querySelector('.gcal-popup')?.remove();
+    const start = ev.start?.dateTime, end = ev.end?.dateTime;
+    const timeStr = start ? `${fmt12(start)} – ${fmt12(end)}` : 'All day';
+    const color   = getEventColor(ev.summary);
 
-    const googleOk    = typeof Auth !== 'undefined' && Auth.Google.isConnected();
-    const microsoftOk = typeof Auth !== 'undefined' && Auth.Microsoft.isConnected();
+    const p = document.createElement('div');
+    p.className = 'gcal-popup';
+    p.innerHTML = `
+      <button class="gcal-popup-x">✕</button>
+      <div class="gcal-popup-stripe" style="background:${color}"></div>
+      <div class="gcal-popup-title">${ev.summary || '(no title)'}</div>
+      <div class="gcal-popup-meta">${timeStr}</div>
+      ${ev.location ? `<div class="gcal-popup-meta">📍 ${ev.location}</div>` : ''}
+      ${ev.description?.trim() ? `<div class="gcal-popup-desc">${ev.description.slice(0, 200)}</div>` : ''}
+    `;
 
-    if (googleOk) {
-      try { raw.push(...(await fetchGoogleEvents(timeMin, timeMax))); }
-      catch(e) { console.warn('[APEX Calendar] Google:', e.message); }
-    }
-    if (microsoftOk) {
-      try { raw.push(...(await fetchMsEvents(timeMin, timeMax))); }
-      catch(e) { console.warn('[APEX Calendar] Outlook:', e.message); }
-    }
+    const W = 264, viewW = window.innerWidth, viewH = window.innerHeight;
+    const left = rect.right + 12 + W > viewW ? Math.max(4, rect.left - W - 12) : rect.right + 12;
+    const top  = Math.min(rect.top, viewH - 220);
+    p.style.cssText = `position:fixed;top:${top}px;left:${left}px;width:${W}px`;
+    document.body.appendChild(p);
 
-    return buildDayMap(raw, sunday);
+    p.querySelector('.gcal-popup-x').addEventListener('click', e => { e.stopPropagation(); p.remove(); });
+    setTimeout(() => document.addEventListener('click', function h(e) {
+      if (!p.contains(e.target)) { p.remove(); document.removeEventListener('click', h); }
+    }), 50);
   }
 
-  // ── RENDER ─────────────────────────────────────────────────────────────────
-  function renderSkeleton(container, sunday) {
-    const today = new Date(); today.setHours(0,0,0,0);
+  // ── BUILD HTML SKELETON ───────────────────────────────────────────────────
+  function buildSkeleton(container, sunday) {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const days  = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(sunday); d.setDate(sunday.getDate() + i); return d;
+    });
+
+    const s = days[0], e = days[6];
+    const weekLabel = s.getMonth() === e.getMonth()
+      ? `${MONTHS[s.getMonth()]} ${s.getDate()} – ${e.getDate()}, ${e.getFullYear()}`
+      : `${MONTHS[s.getMonth()]} ${s.getDate()} – ${MONTHS[e.getMonth()]} ${e.getDate()}, ${e.getFullYear()}`;
+
+    const dayHeaders = days.map(d => {
+      const isToday = d.getTime() === today.getTime();
+      return `<div class="gcal-day-hdr${isToday ? ' is-today' : ''}">
+        <div class="gcal-hdr-name">${DAYS_SHORT[d.getDay()]}</div>
+        <div class="gcal-hdr-num${isToday ? ' today-circle' : ''}">${d.getDate()}</div>
+      </div>`;
+    }).join('');
+
+    const allDayCols = days.map(() => `<div class="gcal-allday-col"></div>`).join('');
+
+    const timeAxis = Array.from({ length: HOURS }, (_, i) => {
+      const h = GRID_START + i;
+      if (h === GRID_START) return `<div class="gcal-hour-label"></div>`;
+      const label = h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`;
+      return `<div class="gcal-hour-label">${label}</div>`;
+    }).join('');
+
+    const hourLines = Array.from({ length: HOURS }, () => `<div class="gcal-hour-line"></div>`).join('');
+
+    const dayCols = days.map((d, i) => {
+      const isToday   = d.getTime() === today.getTime();
+      const isWeekend = d.getDay() === 0 || d.getDay() === 6;
+      return `<div class="gcal-day-col${isToday ? ' is-today' : ''}${isWeekend ? ' is-weekend' : ''}" data-idx="${i}"></div>`;
+    }).join('');
+
+    const cats   = getCategories();
+    const legend = cats.map(c =>
+      `<div class="gcal-legend-item"><span class="gcal-legend-dot" style="background:${c.color}"></span>${c.name}</div>`
+    ).join('');
+
+    container.innerHTML = `
+      <div class="gcal-wrap">
+        <div class="gcal-top-nav">
+          <button class="gcal-nav-btn" id="cal-prev">&#8592;</button>
+          <span class="gcal-week-label">${weekLabel}</span>
+          <button class="gcal-today-btn" id="cal-today">TODAY</button>
+          <button class="gcal-nav-btn" id="cal-next">&#8594;</button>
+          <div class="gcal-legend">${legend}</div>
+        </div>
+        <div class="gcal-col-headers">
+          <div class="gcal-gutter"></div>
+          ${dayHeaders}
+        </div>
+        <div class="gcal-allday-strip">
+          <div class="gcal-gutter gcal-allday-lbl">all‑day</div>
+          <div class="gcal-allday-cols" id="gcal-allday-cols">${allDayCols}</div>
+        </div>
+        <div class="gcal-body">
+          <div class="gcal-time-axis">${timeAxis}</div>
+          <div class="gcal-grid-scroll" id="gcal-scroll">
+            <div class="gcal-grid-inner" id="gcal-inner">
+              <div class="gcal-hour-lines">${hourLines}</div>
+              <div class="gcal-day-cols" id="gcal-day-cols">${dayCols}</div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    container.querySelector('#cal-prev').addEventListener('click',  () => { weekOffset--; _cache = {}; render(container); });
+    container.querySelector('#cal-next').addEventListener('click',  () => { weekOffset++; _cache = {}; render(container); });
+    container.querySelector('#cal-today').addEventListener('click', () => { weekOffset = 0; _cache = {}; render(container); });
+  }
+
+  // ── PLACE EVENTS INTO GRID ────────────────────────────────────────────────
+  function placeEvents(container, events, sunday) {
     const days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(sunday); d.setDate(sunday.getDate() + i); return d;
     });
 
-    const start = days[0], end = days[6];
-    const sameMonth = start.getMonth() === end.getMonth();
-    const weekLabel = sameMonth
-      ? `${MONTHS[start.getMonth()]} ${start.getDate()} – ${end.getDate()}, ${end.getFullYear()}`
-      : `${MONTHS[start.getMonth()]} ${start.getDate()} – ${MONTHS[end.getMonth()]} ${end.getDate()}, ${end.getFullYear()}`;
+    const allDayCols = container.querySelectorAll('.gcal-allday-col');
+    const dayCols    = container.querySelectorAll('.gcal-day-col');
 
-    const dayNames = DAYS_SHORT.map(d => `<div class="cal-day-name-cell">${d}</div>`).join('');
-    const dayCols = days.map((d, i) => {
-      const isToday = d.getTime() === today.getTime();
-      return `<div class="cal-day${isToday ? ' today' : ''}" data-idx="${i}">
-        <div class="cal-date-num">${d.getDate()}</div>
-        <div class="cal-day-events"></div>
-      </div>`;
-    }).join('');
+    events.forEach(ev => {
+      const color = getEventColor(ev.summary);
 
-    container.innerHTML = `
-      <div class="cal-header">
-        <span class="cal-week-label">${weekLabel}</span>
-        <div class="cal-nav">
-          <button class="cal-nav-btn" id="cal-prev">&#8592;</button>
-          <button class="cal-today-btn" id="cal-today">Today</button>
-          <button class="cal-nav-btn" id="cal-next">&#8594;</button>
-        </div>
-      </div>
-      <div class="cal-day-names">${dayNames}</div>
-      <div class="cal-grid">${dayCols}</div>`;
+      if (!ev.start.dateTime) {
+        // All-day event
+        const evStart = new Date(ev.start.date);
+        const evEnd   = new Date(ev.end.date);
+        days.forEach((d, i) => {
+          if (d >= evStart && d < evEnd && allDayCols[i]) {
+            const el = document.createElement('div');
+            el.className = 'gcal-allday-event';
+            el.style.background = color;
+            el.textContent = ev.summary;
+            el.addEventListener('click', e => showPopup(ev, e.target.getBoundingClientRect()));
+            allDayCols[i].appendChild(el);
+          }
+        });
+      } else {
+        // Timed event
+        const evDate = new Date(ev.start.dateTime);
+        const mid    = new Date(evDate); mid.setHours(0, 0, 0, 0);
+        const idx    = days.findIndex(d => d.getTime() === mid.getTime());
+        if (idx < 0 || !dayCols[idx]) return;
 
-    container.querySelector('#cal-prev').addEventListener('click', () => { weekOffset--; render(container); });
-    container.querySelector('#cal-next').addEventListener('click', () => { weekOffset++; render(container); });
-    container.querySelector('#cal-today').addEventListener('click', () => { weekOffset = 0; render(container); });
-  }
+        const top    = topPx(ev.start.dateTime);
+        const height = heightPx(ev.start.dateTime, ev.end.dateTime);
+        if (top >= HOURS * HOUR_H) return;
 
-  function injectEvents(container, evMap) {
-    container.querySelectorAll('.cal-day').forEach(cell => {
-      const idx = parseInt(cell.dataset.idx);
-      const evEl = cell.querySelector('.cal-day-events');
-      if (!evEl) return;
-      const dayEvents = evMap[idx] || [];
-      evEl.innerHTML = dayEvents.map(ev =>
-        `<div class="cal-event${ev.type === 'outline' ? ' outline' : ''}">${ev.title}</div>`
-      ).join('');
+        const el = document.createElement('div');
+        el.className = 'gcal-event';
+        el.style.cssText = `top:${top}px;height:${height}px;background:${color}`;
+        el.innerHTML = `
+          <div class="gcal-event-title">${ev.summary}</div>
+          ${height > 30 ? `<div class="gcal-event-time">${fmt12(ev.start.dateTime)}</div>` : ''}`;
+        el.addEventListener('click', e => { e.stopPropagation(); showPopup(ev, el.getBoundingClientRect()); });
+        dayCols[idx].appendChild(el);
+      }
     });
+
+    // Current time indicator
+    const today   = new Date(); today.setHours(0, 0, 0, 0);
+    const todayIdx = days.findIndex(d => d.getTime() === today.getTime());
+    if (todayIdx >= 0 && dayCols[todayIdx]) {
+      const inner = container.querySelector('#gcal-inner');
+      const col   = dayCols[todayIdx];
+      const line  = document.createElement('div');
+      line.className = 'gcal-now-line';
+      line.id = 'gcal-now-line';
+      line.innerHTML = '<div class="gcal-now-dot"></div>';
+      line.style.cssText = `top:${nowTopPx()}px;left:${col.offsetLeft}px;width:${col.offsetWidth}px`;
+      inner.appendChild(line);
+
+      if (_nowTimer) clearInterval(_nowTimer);
+      _nowTimer = setInterval(() => {
+        const nl = document.getElementById('gcal-now-line');
+        if (nl) nl.style.top = `${nowTopPx()}px`;
+      }, 60000);
+    }
+
+    // Auto-scroll to current time (or 8am for other weeks)
+    const scroll = container.querySelector('#gcal-scroll');
+    if (scroll) {
+      const target = todayIdx >= 0 ? Math.max(0, nowTopPx() - 100) : 2 * HOUR_H;
+      setTimeout(() => { scroll.scrollTop = target; }, 60);
+    }
   }
 
+  // ── MAIN RENDER ───────────────────────────────────────────────────────────
   async function render(container) {
     const sunday = getSunday(weekOffset);
-    renderSkeleton(container, sunday);
+    buildSkeleton(container, sunday);
 
-    const googleOk    = typeof Auth !== 'undefined' && Auth.Google.isConnected();
-    const microsoftOk = typeof Auth !== 'undefined' && Auth.Microsoft.isConnected();
-
-    if (!googleOk && !microsoftOk) {
-      // Show mock data when not connected
-      const mockEvents = {
-        1: [{ title: '9:00 AM  Team Standup', type: 'filled' }],
-        3: [{ title: '2:00 PM  Client Call', type: 'filled' }],
-        5: [{ title: '10:00 AM  Sprint Planning', type: 'filled' }],
-      };
-      injectEvents(container, mockEvents);
-      const grid = container.querySelector('.cal-grid');
-      if (grid) grid.insertAdjacentHTML('beforeend',
-        `<div class="cal-not-connected">CONNECT GOOGLE OR MICROSOFT IN SETTINGS TO SEE REAL EVENTS</div>`);
+    const connected = typeof Auth !== 'undefined' && (Auth.Google.isConnected() || Auth.Microsoft.isConnected());
+    if (!connected) {
+      // Scroll to 8am on empty calendar
+      setTimeout(() => {
+        const s = container.querySelector('#gcal-scroll');
+        if (s) s.scrollTop = 2 * HOUR_H;
+      }, 60);
       return;
     }
 
-    const cacheKey = sunday.toISOString();
-    if (_eventsCache[cacheKey]) {
-      injectEvents(container, _eventsCache[cacheKey]);
-      return;
+    try {
+      const events = await loadWeek(sunday);
+      placeEvents(container, events, sunday);
+    } catch(e) {
+      console.warn('[APEX Cal]', e.message);
     }
-
-    const evMap = await loadEvents(sunday);
-    _eventsCache[cacheKey] = evMap;
-    injectEvents(container, evMap);
   }
 
-  function init() {
-    _container = document.getElementById('view-calendar');
-    render(_container);
-  }
+  function init()    { _container = document.getElementById('view-calendar'); render(_container); }
+  function refresh() { _cache = {}; if (_container) render(_container); }
 
-  function refresh() {
-    _eventsCache = {};
-    if (_container) render(_container);
-  }
-
-  return { init, refresh };
+  return { init, refresh, getCategories, DEFAULT_CATEGORIES };
 })();
