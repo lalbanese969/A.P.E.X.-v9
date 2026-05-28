@@ -101,72 +101,6 @@ const SettingsView = (() => {
     container.querySelector('#s-disconnect-ms').style.display     = mConn ? '' : 'none';
   }
 
-  // ── CATEGORIES ─────────────────────────────────────────────────────────────
-  const CAT_COLORS = ['#1a73e8','#d50000','#e67c73','#f4511e','#f6bf26','#33b679',
-                      '#0f9d58','#039be5','#3f51b5','#7986cb','#8e24aa','#616161','#ff6a00'];
-
-  function getCategories() {
-    const def = typeof CalendarView !== 'undefined' ? CalendarView.DEFAULT_CATEGORIES : [];
-    try { return JSON.parse(localStorage.getItem('apex_categories') || 'null') || def; }
-    catch { return def; }
-  }
-
-  function saveCategories(cats) {
-    localStorage.setItem('apex_categories', JSON.stringify(cats));
-    if (typeof CalendarView !== 'undefined') CalendarView.refresh();
-  }
-
-  function renderCategories(container) {
-    const list = container.querySelector('#s-categories-list');
-    if (!list) return;
-    const cats = getCategories();
-    list.innerHTML = cats.map((c, i) => `
-      <div class="s-cat-row" data-idx="${i}">
-        <div class="s-cat-swatch" style="background:${c.color}" data-idx="${i}" title="Click to change color"></div>
-        <input class="s-cat-name settings-input" data-idx="${i}" value="${c.name}" placeholder="Category name" style="flex:1;min-width:80px"/>
-        <input class="s-cat-kw settings-input" data-idx="${i}" value="${(c.keywords||[]).join(', ')}" placeholder="keyword1, keyword2" style="flex:2"/>
-        <button class="s-cat-del" data-idx="${i}" title="Remove">✕</button>
-      </div>`).join('');
-
-    // Swatch click → cycle color
-    list.querySelectorAll('.s-cat-swatch').forEach(sw => {
-      sw.addEventListener('click', () => {
-        const idx = +sw.dataset.idx;
-        const cur = CAT_COLORS.indexOf(cats[idx].color);
-        cats[idx].color = CAT_COLORS[(cur + 1) % CAT_COLORS.length];
-        saveCategories(cats);
-        renderCategories(container);
-      });
-    });
-
-    // Name change
-    list.querySelectorAll('.s-cat-name').forEach(inp => {
-      inp.addEventListener('change', () => {
-        const idx = +inp.dataset.idx;
-        cats[idx].name = inp.value.trim();
-        saveCategories(cats);
-      });
-    });
-
-    // Keywords change
-    list.querySelectorAll('.s-cat-kw').forEach(inp => {
-      inp.addEventListener('change', () => {
-        const idx = +inp.dataset.idx;
-        cats[idx].keywords = inp.value.split(',').map(k => k.trim()).filter(Boolean);
-        saveCategories(cats);
-      });
-    });
-
-    // Delete
-    list.querySelectorAll('.s-cat-del').forEach(btn => {
-      btn.addEventListener('click', () => {
-        cats.splice(+btn.dataset.idx, 1);
-        saveCategories(cats);
-        renderCategories(container);
-      });
-    });
-  }
-
   function init() {
     const container = document.getElementById('view-settings');
     const gConn = typeof Auth !== 'undefined' && Auth.Google.isConnected();
@@ -227,16 +161,6 @@ const SettingsView = (() => {
           </div>
         </div>
 
-        <!-- EVENT CATEGORIES -->
-        <div class="settings-section">
-          <div class="settings-section-title">EVENT CATEGORIES</div>
-          <div class="settings-hint">Keywords auto-color your calendar events. Click a swatch to cycle colors.</div>
-          <div id="s-categories-list"></div>
-          <div class="settings-row-btns" style="margin-top:10px">
-            <button class="settings-connect-btn" id="s-add-cat">+ ADD CATEGORY</button>
-          </div>
-        </div>
-
         <!-- GEMINI -->
         <div class="settings-section">
           <div class="settings-section-title">AI — GEMINI</div>
@@ -293,14 +217,6 @@ const SettingsView = (() => {
 
     bindGoogle(container);
     bindMicrosoft(container);
-    renderCategories(container);
-
-    container.querySelector('#s-add-cat').addEventListener('click', () => {
-      const cats = getCategories();
-      cats.push({ name: 'New Category', keywords: [], color: CAT_COLORS[0] });
-      saveCategories(cats);
-      renderCategories(container);
-    });
 
     container.querySelector('#s-save-gemini').addEventListener('click', () => {
       const key = container.querySelector('#s-gemini').value.trim();
