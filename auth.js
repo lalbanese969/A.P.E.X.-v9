@@ -90,7 +90,7 @@ const Auth = (() => {
     const SCOPES = ['Mail.ReadWrite', 'Mail.Send', 'Calendars.ReadWrite', 'User.Read'];
     let _app = null, _account = null, _inflight = null;
 
-    function clientId()    { return localStorage.getItem('apex_ms_client_id') || '64780acb-8e01-462c-ad53-b10a0f2fc9e9'; }
+    function clientId()    { return localStorage.getItem('apex_ms_client_id') || '805553a5-80f5-4b7a-849f-690c520bb144'; }
     function storedToken() { return localStorage.getItem('apex_ms_token') || ''; }
     function storedExpiry(){ return parseInt(localStorage.getItem('apex_ms_expiry') || '0'); }
     function isValid()     { return !!storedToken() && Date.now() < storedExpiry() - 60000; }

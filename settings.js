@@ -2,7 +2,7 @@ const SettingsView = (() => {
   // Built-in defaults — shown in fields if user hasn't overridden them
   const DEFAULTS = {
     google_client_id: '395196249030-o81bj4tae9ra01h0v04810nl0evpt1so.apps.googleusercontent.com',
-    ms_client_id:     '64780acb-8e01-462c-ad53-b10a0f2fc9e9'
+    ms_client_id:     '805553a5-80f5-4b7a-849f-690c520bb144'
   };
 
   function save(key, val) { localStorage.setItem(`apex_${key}`, val); }
