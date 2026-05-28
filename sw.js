@@ -1,6 +1,4 @@
-// Bump this string on every deploy so the activate handler purges the old cache.
-// Format: apex-v9-YYYYMMDD-HHMM  (update the date/time when you push)
-const CACHE = 'apex-v9-20260528-0001';
+const CACHE = 'apex-v9-20260528-0002';
 const ASSETS = [
   './index.html',
   './style.css',
@@ -19,10 +17,10 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  // Use individual adds so one missing file doesn't kill the whole install
   e.waitUntil(
     caches.open(CACHE).then(c =>
-      Promise.allSettled(ASSETS.map(a => c.add(a)))
+      // cache:'reload' bypasses the HTTP cache so pre-cached files are always fresh
+      Promise.allSettled(ASSETS.map(a => c.add(new Request(a, { cache: 'reload' }))))
     )
   );
   self.skipWaiting();
@@ -38,14 +36,33 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Network-first: always try network, cache result, fall back to cache if offline
+  const url = e.request.url;
+  const scope = self.registration.scope;
+
+  // For our own app files: bypass HTTP cache so the browser never serves stale JS/CSS.
+  // Falls back to SW cache only when offline.
+  if (url.startsWith(scope) && !url.includes('?')) {
+    e.respondWith(
+      fetch(new Request(e.request, { cache: 'no-cache' }))
+        .then(res => {
+          caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+          return res;
+        })
+        .catch(() => caches.match(e.request).then(r => r || new Response('', { status: 404 })))
+    );
+    return;
+  }
+
+  // For external requests (fonts, CDN, APIs): pass through without intercepting
+  // so we don't accidentally cache or block OAuth/API calls.
+  if (!url.startsWith(scope)) return;
+
   e.respondWith(
-    fetch(e.request).then(res => {
-      const copy = res.clone();
-      caches.open(CACHE).then(c => c.put(e.request, copy));
-      return res;
-    }).catch(() =>
-      caches.match(e.request).then(cached => cached || new Response('', { status: 404 }))
-    )
+    fetch(e.request)
+      .then(res => {
+        caches.open(CACHE).then(c => c.put(e.request, res.clone()));
+        return res;
+      })
+      .catch(() => caches.match(e.request).then(r => r || new Response('', { status: 404 })))
   );
 });
