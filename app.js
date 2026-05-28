@@ -125,6 +125,7 @@ renderTasks();
 
 // ── INIT ─────────────────────────────────────────────
 HoneycombBg.init(document.getElementById('honeycomb-canvas'));
+if (typeof Auth !== 'undefined') Auth.prewarm();
 
 let _startupGreeting;
 if (typeof Memory !== 'undefined') {
@@ -174,6 +175,23 @@ installBtn && installBtn.addEventListener('click', async () => {
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => {
+        // Force an immediate update check every time the app opens.
+        // Without this, the browser may wait up to 24h before re-fetching sw.js.
+        reg.update();
+      })
+      .catch(() => {});
+  });
+
+  // When a new SW activates and claims this tab, reload so the latest
+  // JS/CSS files are picked up (skipWaiting + clients.claim already fire
+  // the new worker immediately; this ensures the page follows suit).
+  let _swRefreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!_swRefreshing) {
+      _swRefreshing = true;
+      window.location.reload();
+    }
   });
 }

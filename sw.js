@@ -1,4 +1,6 @@
-const CACHE = 'apex-v9-v8';
+// Bump this string on every deploy so the activate handler purges the old cache.
+// Format: apex-v9-YYYYMMDD-HHMM  (update the date/time when you push)
+const CACHE = 'apex-v9-20260528-0001';
 const ASSETS = [
   './index.html',
   './style.css',
@@ -6,6 +8,7 @@ const ASSETS = [
   './honeycomb.js',
   './memory.js',
   './ai.js',
+  './auth.js',
   './chat.js',
   './email.js',
   './calendar.js',

@@ -335,6 +335,19 @@ html, body {
   padding: 3px 10px; cursor: pointer; border-radius: var(--r-xs); transition: all 0.12s;
 }
 .email-action-btn:hover { color: var(--orange); border-color: rgba(255,106,0,0.4); }
+.email-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.email-loading {
+  text-align: center; padding: 48px; font-size: 0.75rem;
+  letter-spacing: 0.15em; color: var(--text-dim);
+}
+.email-not-connected {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 60px 24px; gap: 10px; text-align: center;
+}
+.not-connected-icon { font-size: 2.4rem; opacity: 0.25; }
+.not-connected-msg { font-size: 0.85rem; font-weight: 700; letter-spacing: 0.12em; color: var(--text-dim); }
+.not-connected-sub { font-size: 0.72rem; color: var(--text-dim); opacity: 0.6; }
 
 /* ── CALENDAR ────────────────────────────────────────── */
 .cal-header {
@@ -404,6 +417,11 @@ html, body {
   background: var(--orange-sub); color: var(--orange);
   border: 1px solid rgba(255,106,0,0.35);
 }
+.cal-not-connected {
+  grid-column: 1 / -1; text-align: center; font-size: 0.65rem;
+  letter-spacing: 0.12em; color: var(--text-dim); opacity: 0.4;
+  padding: 8px 0 4px;
+}
 
 /* ── SETTINGS ────────────────────────────────────────── */
 .settings-scroll {
@@ -454,6 +472,10 @@ html, body {
   background: var(--surface-2); display: inline-block;
 }
 .settings-status.connected { color: #3ddc84; }
+.settings-hint {
+  font-size: 0.68rem; color: var(--text-dim); opacity: 0.6;
+  margin-top: 8px; line-height: 1.5; padding: 0 2px;
+}
 
 /* ── RIGHT BAR - TASKS ───────────────────────────────── */
 #right-bar {
