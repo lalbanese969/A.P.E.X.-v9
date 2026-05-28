@@ -1,21 +1,18 @@
 const AI = (() => {
   const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
 
-  const BASE_SYSTEM = `You are A.P.E.X. — Automated Personal Executive Assistant. You are a sharp, efficient AI secretary built into a personal dashboard. Be direct and concise. No markdown formatting unless the user asks for it. Get straight to the point.`;
+  const FALLBACK_SYSTEM = `You are A.P.E.X. — Automated Personal Executive Assistant. Be direct, concise, and sharp. Address the user as Sir.`;
 
   const geminiKey   = () => localStorage.getItem('apex_gemini_key')   || '';
   const geminiModel = () => localStorage.getItem('apex_gemini_model') || DEFAULT_MODEL;
   const ollamaUrl   = () => localStorage.getItem('apex_ollama_url')   || 'http://localhost:11434';
   const ollamaModel = () => localStorage.getItem('apex_ollama_model') || 'llama3';
 
-  // Build the system prompt — always injects people + recent facts, plus any router-retrieved context
+  // Full system prompt built by Memory — includes persona, user profile, people, and memory blocks.
+  // Falls back to a minimal prompt if Memory isn't loaded yet.
   function buildSystem(memoryContext) {
-    if (typeof Memory === 'undefined') return BASE_SYSTEM + (memoryContext ? `\n\nCONTEXT:\n${memoryContext}` : '');
-    const people  = '\n\n' + Memory.buildPeopleBlock();
-    const recent  = Memory.getRecentFacts();
-    const recentPart = recent ? `\n\nWHAT I REMEMBER:\n${recent}` : '';
-    const mem     = memoryContext ? `\n\nADDITIONAL CONTEXT:\n${memoryContext}` : '';
-    return BASE_SYSTEM + people + recentPart + mem;
+    if (typeof Memory !== 'undefined') return Memory.buildFullSystem(memoryContext);
+    return FALLBACK_SYSTEM + (memoryContext ? `\n\nCONTEXT:\n${memoryContext}` : '');
   }
 
   function toGeminiContents(msgs) {

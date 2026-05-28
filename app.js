@@ -127,14 +127,14 @@ renderTasks();
 HoneycombBg.init(document.getElementById('honeycomb-canvas'));
 if (typeof Auth !== 'undefined') Auth.prewarm();
 
-let _startupGreeting;
-if (typeof Memory !== 'undefined') {
-  const _birthdays = Memory.init();
-  if (_birthdays.length) {
-    _startupGreeting = `SYSTEM READY — Today is ${_birthdays.join(' & ')}'s birthday.`;
-  }
-}
-Chat.init(_startupGreeting);
+// Fire greeting generation immediately — runs in background while rest of UI loads
+const _greetingPromise = (typeof Memory !== 'undefined' && localStorage.getItem('apex_gemini_key'))
+  ? Memory.prewarmGreeting()
+  : Promise.resolve('SYSTEM READY — HOW CAN I ASSIST?');
+
+if (typeof Memory !== 'undefined') Memory.init();
+
+Chat.init(_greetingPromise);
 EmailView.init();
 CalendarView.init();
 SettingsView.init();

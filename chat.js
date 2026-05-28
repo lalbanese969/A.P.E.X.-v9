@@ -89,7 +89,9 @@ const Chat = (() => {
 
     // Step 2 — Main AI call with injected memory context
     try {
-      const reply = await AI.send(messages, memoryContext || undefined);
+      const rawReply = await AI.send(messages, memoryContext || undefined);
+      // Strip any hidden persona-update tags before displaying
+      const reply = (typeof Memory !== 'undefined') ? Memory.processReply(rawReply) : rawReply;
       setThinking(false);
       apexReply(reply);
 
@@ -127,7 +129,7 @@ const Chat = (() => {
     renderMessages();
   }
 
-  function init(greeting) {
+  function init(greetingPromise) {
     const s = sendBtn();
     const inp = input();
     s && s.addEventListener('click', send);
@@ -139,8 +141,12 @@ const Chat = (() => {
 
     const r = focusResponse();
     if (r) {
-      r.textContent = greeting || 'SYSTEM READY — HOW CAN I ASSIST?';
+      r.textContent = 'INITIALIZING...';
       r.classList.add('empty');
+      // Resolve greeting when ready — shows fallback immediately if no key
+      Promise.resolve(greetingPromise)
+        .then(text => { if (r && text) r.textContent = text; })
+        .catch(() => { if (r) r.textContent = 'SYSTEM READY — HOW CAN I ASSIST?'; });
     }
   }
 

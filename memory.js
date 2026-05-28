@@ -6,20 +6,37 @@ const Memory = (() => {
     config:  'apex_brain_config'
   };
 
-  // ── STORAGE ──────────────────────────────────────────────────────────────
-  function load(key)         { return JSON.parse(localStorage.getItem(STORE[key]) || 'null'); }
-  function persist(key, data){ localStorage.setItem(STORE[key], JSON.stringify(data)); }
+  // ── HARDCODED IDENTITY DEFAULTS ──────────────────────────────────────────
+  const DEFAULT_USER = {
+    name:       'Luke Albanese',
+    school:     'RIT — Rochester Institute of Technology, junior',
+    location:   'New York, EST timezone',
+    health:     'ADHD — compensate by being proactive about reminders and important info',
+    address_as: 'Sir'
+  };
 
+  const DEFAULT_CONFIG = {
+    humor:     7,
+    formality: 3,
+    traits:    ['witty', 'direct', 'loyal', 'perceptive'],
+    notes:     ''
+  };
+
+  // ── STORAGE ──────────────────────────────────────────────────────────────
+  function load(key)          { return JSON.parse(localStorage.getItem(STORE[key]) || 'null'); }
+  function persist(key, data) { localStorage.setItem(STORE[key], JSON.stringify(data)); }
+
+  // Merge stored values with defaults so Luke's profile is always present
   function getGeneral() { return load('general') || []; }
   function getPeople()  { return load('people')  || []; }
-  function getUser()    { return load('user')     || {}; }
-  function getConfig()  { return load('config')   || { humor: 5, formality: 5, traits: [], notes: '' }; }
+  function getUser()    { return { ...DEFAULT_USER,   ...(load('user')   || {}) }; }
+  function getConfig()  { return { ...DEFAULT_CONFIG, ...(load('config') || {}) }; }
 
   function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
-  // ── JSON PARSING (handles ```json fences Gemini sometimes adds) ──────────
+  // ── JSON PARSING ─────────────────────────────────────────────────────────
   function parseJSON(raw) {
-    const clean = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/,'').trim();
+    const clean = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
     return JSON.parse(clean);
   }
 
@@ -32,7 +49,7 @@ const Memory = (() => {
       .map(p => [p.name.first, p.name.last].filter(Boolean).join(' ') || 'Someone');
   }
 
-  // ── COMPACT SUMMARIES for Gemini prompts ────────────────────────────────
+  // ── MEMORY SUMMARIES ─────────────────────────────────────────────────────
   function getGeneralSummary() {
     const facts = getGeneral();
     if (!facts.length) return 'None.';
@@ -56,7 +73,7 @@ const Memory = (() => {
     }).join('\n');
   }
 
-  // ── PEOPLE BLOCK injected into every system prompt ───────────────────────
+  // ── PEOPLE BLOCK ─────────────────────────────────────────────────────────
   function buildPeopleBlock() {
     const people = getPeople();
     if (!people.length) return 'PEOPLE ON FILE:\nNone on file — do NOT invent anyone.';
@@ -66,10 +83,109 @@ const Memory = (() => {
       const bd = p.birthdate;
       if (bd && bd.month && bd.day)
         parts.push(`bday:${String(bd.month).padStart(2,'0')}-${String(bd.day).padStart(2,'0')}`);
-      if (p.notes) parts.push(String(p.notes).slice(0,100));
+      if (p.notes) parts.push(String(p.notes).slice(0, 100));
       return parts.join(' | ');
     });
     return 'PEOPLE ON FILE:\n' + lines.join('\n');
+  }
+
+  // ── PERSONA BLOCK ─────────────────────────────────────────────────────────
+  function buildPersonaBlock() {
+    const cfg = getConfig();
+    const h = cfg.humor, f = cfg.formality;
+    const humorLine =
+      h >= 8 ? 'high — banter freely, sarcasm welcome, make it fun' :
+      h >= 5 ? 'moderate — natural wit, read the room' :
+               'low — minimal jokes, keep it on-task';
+    const formalLine =
+      f <= 3 ? 'casual — punchy, direct, conversational' :
+      f <= 6 ? 'balanced — professional but approachable' :
+               'formal — polished and structured';
+
+    return `APEX IDENTITY:
+You are A.P.E.X. (Automated Personal Executive Assistant) — Jarvis for real life.
+Always address the user as "${getUser().address_as}".
+Humor: ${h}/10 — ${humorLine}.
+Formality: ${f}/10 — ${formalLine}.
+Core traits: ${(cfg.traits || []).join(', ')}.
+Style: Short and punchy. Never over-explain. Never waste words. No unsolicited bullet points or lists. No "Certainly!" or "Of course!" or "Great question!" — just answer. No markdown unless explicitly asked.${cfg.notes ? '\nCurrent directive: ' + cfg.notes : ''}
+Personality update: if the user asks you to change your tone or style, naturally comply AND append [APEX_CONFIG:{"humor":N,"formality":N}] at the very end of your reply (it will be stripped before display).`;
+  }
+
+  // ── USER PROFILE BLOCK ────────────────────────────────────────────────────
+  function buildUserBlock() {
+    const u = getUser();
+    return `ABOUT ${(u.name || 'YOUR USER').toUpperCase().split(' ')[0]}:
+Full name: ${u.name}
+School: ${u.school}
+Location: ${u.location}
+Health note: ${u.health}`;
+  }
+
+  // ── FULL SYSTEM PROMPT ────────────────────────────────────────────────────
+  // Called by AI.buildSystem() — builds every prompt fresh with full context.
+  function buildFullSystem(memoryContext) {
+    const parts = [
+      buildPersonaBlock(),
+      buildUserBlock(),
+      buildPeopleBlock(),
+    ];
+    const recent = getRecentFacts();
+    if (recent) parts.push(`WHAT I REMEMBER:\n${recent}`);
+    if (memoryContext) parts.push(`RELEVANT CONTEXT:\n${memoryContext}`);
+    return parts.join('\n\n');
+  }
+
+  // ── PERSONA TAG PROCESSOR ─────────────────────────────────────────────────
+  // Call this on every APEX reply before displaying. Strips hidden config tags
+  // and applies any personality update APEX embedded.
+  function processReply(text) {
+    const match = text.match(/\[APEX_CONFIG:(\{[^}]*\})\]/);
+    if (match) {
+      try {
+        const update = JSON.parse(match[1]);
+        const cfg = getConfig();
+        if (typeof update.humor === 'number')
+          cfg.humor = Math.min(10, Math.max(1, Math.round(update.humor)));
+        if (typeof update.formality === 'number')
+          cfg.formality = Math.min(10, Math.max(1, Math.round(update.formality)));
+        persist('config', cfg);
+      } catch {}
+      return text.replace(/\[APEX_CONFIG:\{[^}]*\}\]\s*/g, '').trim();
+    }
+    return text;
+  }
+
+  // ── STARTUP GREETING ──────────────────────────────────────────────────────
+  // Pre-fired immediately on app load so the greeting is ready instantly.
+  let _greetingPromise = null;
+
+  function prewarmGreeting() {
+    if (_greetingPromise) return _greetingPromise;
+
+    const hour   = new Date().getHours();
+    const period = hour < 12 ? 'morning' : hour < 17 ? 'afternoon' : 'evening';
+    const name   = getUser().address_as;
+    const bdays  = checkBirthdays();
+    const bdNote = bdays.length ? ` Also note: today is ${bdays.join(' and ')}'s birthday.` : '';
+
+    const prompt = `Generate a brief ${period} greeting for ${name}.${bdNote}
+Rules: Jarvis-style. Max 2 sentences. Do NOT open with "Good ${period}" — find a more interesting opener. Be punchy, maybe slightly witty. End with a one-clause offer to help. Address as "${name}". No markdown. No lists.`;
+
+    _greetingPromise = AI.sendToGemini(
+      [{ role: 'user', text: prompt }],
+      buildPersonaBlock()
+    ).then(text => processReply(text))
+     .catch(() => {
+       const fallback = {
+         morning:   `Morning, ${name}. What are we dealing with today?`,
+         afternoon: `Afternoon, ${name}. What do you need?`,
+         evening:   `Evening, ${name}. Ready when you are.`
+       };
+       return fallback[period];
+     });
+
+    return _greetingPromise;
   }
 
   // ── SCHEMA HELPERS ───────────────────────────────────────────────────────
@@ -93,7 +209,7 @@ const Memory = (() => {
       if (!op.type) continue;
 
       if (op.type === 'general' && op.content) {
-        general.push({ id: uid(), content: op.content, tags: op.tags||[], type:'learned', created:now, updated:now });
+        general.push({ id: uid(), content: op.content, tags: op.tags||[], type: 'learned', created: now, updated: now });
         if (general.length > 500) general.splice(0, general.length - 500);
         gDirty = true;
 
@@ -106,7 +222,7 @@ const Memory = (() => {
           relation: op.relation || op.relationship || '',
           relational_aliases: [],
           emails: [],
-          birthdate: parseBirthdate(op.birthday||null),
+          birthdate: parseBirthdate(op.birthday || null),
           hobbies: [], interests: [], gift_ideas: [],
           notes: op.notes || '',
           created: now, updated: now
@@ -131,62 +247,66 @@ const Memory = (() => {
     if (pDirty) persist('people', people);
   }
 
-  // ── PROMPT BUILDERS ──────────────────────────────────────────────────────
+  // ── ROUTER PROMPT ────────────────────────────────────────────────────────
   function buildRouterPrompt(msg) {
-    return `You are a memory router for an AI assistant. Analyze the user message.
+    return `You are a memory router for APEX, an AI assistant.
 
-EXISTING MEMORY SUMMARIES:
+EXISTING MEMORIES:
 ${getGeneralSummary()}
 
 KNOWN PEOPLE:
 ${getPeopleSummary()}
 
-USER MESSAGE: "${msg.replace(/"/g,"'")}"
+USER MESSAGE: "${msg.replace(/"/g, "'")}"
 
-Reply with ONLY valid JSON, no markdown, no explanation:
+Reply with ONLY valid JSON, no markdown:
 {"relevant":[],"save":[],"people":{"matched":[],"ambiguous":[],"new":[]}}
 
-Rules:
-- "relevant": IDs of existing memories useful for answering this. Empty array if none.
-- "save": facts the user explicitly stated worth saving [{content,tags}]. Empty array if none.
-- "people": only if a person is clearly mentioned. Empty arrays otherwise.
-If nothing applies return the empty template above exactly.`;
+- "relevant": IDs of existing memories useful for answering this. Empty if none.
+- "save": facts explicitly stated by the user worth saving [{content,tags}]. Empty if none.
+- "people.matched": IDs of known people clearly referenced.
+- "people.ambiguous": names where 2+ people could match.
+- "people.new": names of people never seen before.
+If nothing applies return the empty template exactly.`;
   }
 
+  // ── LISTENER PROMPT ──────────────────────────────────────────────────────
   function buildListenerPrompt(userMsg, apexMsg) {
-    return `You are a memory extractor. Extract facts worth remembering from this exchange.
+    return `You are a memory extractor for APEX.
 
-USER: ${userMsg.replace(/\n/g,' ')}
-ASSISTANT: ${apexMsg.replace(/\n/g,' ')}
+USER: ${userMsg.replace(/\n/g, ' ')}
+APEX: ${apexMsg.replace(/\n/g, ' ')}
 
 EXISTING PEOPLE:
 ${getPeopleSummary()}
 
 Reply with ONLY a valid JSON array, no markdown.
-Each element must be one of:
-  {"type":"general","content":"concise fact under 200 chars","tags":["tag1"]}
+Each element: one of these types:
+  {"type":"general","content":"concise fact under 200 chars","tags":["tag"]}
   {"type":"person_new","name":"Full Name","relation":"friend","birthday":"MM-DD or null","notes":"detail"}
   {"type":"person_update","id":"existingId","updates":{"notes":"new note","hobbies":["hobby"]}}
 
 Rules:
-- Only extract facts the user stated about themselves, preferences, plans, or named people.
-- Do NOT extract general knowledge or anything the assistant said.
-- Arrays in person_update.updates are unioned, not replaced.
+- Only extract facts Luke stated about himself, his preferences, plans, or named people.
+- Do NOT extract what APEX said, general knowledge, or transient conversation.
+- Arrays in updates are unioned, never replaced.
 - If nothing worth saving: []`;
   }
 
-  // ── PIPELINE STEP 1: ROUTER (blocks before main reply) ───────────────────
+  // ── ROUTER (Step 1 — runs before main AI reply) ──────────────────────────
   async function router(userMessage) {
     try {
-      const raw = await AI.callUtility(buildRouterPrompt(userMessage));
+      const raw    = await AI.callUtility(buildRouterPrompt(userMessage));
       const result = parseJSON(raw);
 
-      // Immediately persist anything the router flagged as explicit saves
       if (Array.isArray(result.save) && result.save.length) {
         const general = getGeneral();
         const now = Date.now();
         result.save.forEach(item => {
-          if (item.content) general.push({ id:uid(), content:item.content, tags:item.tags||[], type:'saved', created:now, updated:now });
+          if (item.content) general.push({
+            id: uid(), content: item.content, tags: item.tags||[],
+            type: 'saved', created: now, updated: now
+          });
         });
         persist('general', general);
       }
@@ -196,8 +316,8 @@ Rules:
     }
   }
 
-  // ── PIPELINE STEP 2: LISTENER (fire-and-forget after reply) ─────────────
-  async function listener(userMessage, apexReply) {
+  // ── LISTENER (Step 3 — fire-and-forget after reply) ──────────────────────
+  async function _listener(userMessage, apexReply) {
     try {
       const raw = await AI.callUtility(buildListenerPrompt(userMessage, apexReply));
       const ops = parseJSON(raw);
@@ -206,23 +326,23 @@ Rules:
   }
 
   function runListener(userMessage, apexReply) {
-    listener(userMessage, apexReply).catch(() => {});
+    _listener(userMessage, apexReply).catch(() => {});
   }
 
-  // ── RETRIEVAL ────────────────────────────────────────────────────────────
+  // ── RETRIEVAL ─────────────────────────────────────────────────────────────
   function getFactsById(ids) {
     return getGeneral().filter(f => ids.includes(f.id));
   }
 
-  // ── INIT (called from app.js) ────────────────────────────────────────────
+  // ── INIT ──────────────────────────────────────────────────────────────────
   function init() {
-    return checkBirthdays(); // returns [] or string[] of names with birthdays today
+    return checkBirthdays();
   }
 
   return {
-    init, router, runListener,
-    buildPeopleBlock, getRecentFacts, getFactsById,
-    getGeneral, getPeople, getUser, getConfig,
-    applyOps
+    init, router, runListener, processReply, prewarmGreeting,
+    buildFullSystem, buildPersonaBlock, buildPeopleBlock,
+    getRecentFacts, getFactsById,
+    getGeneral, getPeople, getUser, getConfig, applyOps
   };
 })();
