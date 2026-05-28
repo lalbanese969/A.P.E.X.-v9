@@ -226,16 +226,24 @@ Health note: ${u.health}`;
 
     _greetingPromise = fetchTodayContext().catch(() => '').then(context => {
       const hasContext = !!context.trim();
+
+      // No data available — skip briefing, just give a plain greeting
+      if (!hasContext && !bdays.length) {
+        const plain = `Generate a brief ${period} greeting for ${name}.
+Rules: 1-2 sentences. Jarvis-style opener + offer to help. Do NOT mention any events, emails, or specific data — you have none. Address as "${name}". No markdown.`;
+        return AI.sendToGemini([{ role: 'user', text: plain }], buildPersonaBlock())
+          .then(t => processReply(t));
+      }
+
+      // Real data available — brief strictly on what's in it
       const prompt = `You are APEX, Luke's personal secretary. Generate his ${period} briefing.
-${hasContext ? `\nTODAY'S DATA:\n${context}` : ''}${bdNote}
+${hasContext ? `\nTODAY'S DATA (the ONLY source of facts — do NOT invent anything not listed here):\n${context}` : ''}${bdNote}
 
 Rules:
-- Jarvis-style. Max 2-3 sentences.
-- Be SPECIFIC — mention actual event names, times, and email senders if available.
-- If there are emails needing attention, say so and offer to draft.
-- If calendar is empty and inbox is quiet, say so wittily.
-- Do NOT start with "Good ${period}". Find a more interesting opener.
-- Punchy, maybe slightly sarcastic. Address as "${name}". No markdown.`;
+- NEVER invent events, emails, names, or times that are not in TODAY'S DATA above.
+- If TODAY'S DATA is empty or missing, do NOT mention any events or emails at all.
+- Max 2-3 sentences. Be specific only with data shown above.
+- Jarvis-style, punchy. Address as "${name}". No markdown.`;
 
       return AI.sendToGemini([{ role: 'user', text: prompt }], buildPersonaBlock())
         .then(t => processReply(t));

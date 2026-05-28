@@ -8,29 +8,21 @@ const CalendarView = (() => {
   const MONTHS     = ['January','February','March','April','May','June','July',
                       'August','September','October','November','December'];
 
-  // Exact Google Calendar color palette
-  const GCAL_COLORS = [
-    { name:'Tomato',    hex:'#D50000' },
-    { name:'Flamingo',  hex:'#E67C73' },
-    { name:'Tangerine', hex:'#F4511E' },
-    { name:'Banana',    hex:'#F6BF26' },
-    { name:'Sage',      hex:'#33B679' },
-    { name:'Basil',     hex:'#0F9D58' },
-    { name:'Peacock',   hex:'#039BE5' },
-    { name:'Blueberry', hex:'#3F51B5' },
-    { name:'Lavender',  hex:'#7986CB' },
-    { name:'Grape',     hex:'#8E24AA' },
-    { name:'Graphite',  hex:'#616161' },
+  // All 11 exact Google Calendar colors — fixed, never added or removed
+  const GCAL_PALETTE = [
+    { hex:'#D50000', name:'Tomato'    },
+    { hex:'#E67C73', name:'Flamingo'  },
+    { hex:'#F4511E', name:'Tangerine' },
+    { hex:'#F6BF26', name:'Banana'    },
+    { hex:'#33B679', name:'Sage'      },
+    { hex:'#0F9D58', name:'Basil'     },
+    { hex:'#039BE5', name:'Peacock'   },
+    { hex:'#3F51B5', name:'Blueberry' },
+    { hex:'#7986CB', name:'Lavender'  },
+    { hex:'#8E24AA', name:'Grape'     },
+    { hex:'#616161', name:'Graphite'  },
   ];
-  const OTHER_COLOR = '#1A73E8'; // Google Calendar default — "Other"
-
-  const DEFAULT_CATEGORIES = [
-    { name:'Lunch / Dinner', keywords:['lunch','dinner','brunch','breakfast','food','restaurant'], color:'#0F9D58' },
-    { name:'Client',         keywords:['client','prospect','sales','demo','pitch','deal'],          color:'#616161' },
-    { name:'Meeting',        keywords:['meeting','sync','standup','sprint','review','planning','call','interview','1:1'], color:'#3F51B5' },
-    { name:'Personal',       keywords:['personal','family','home','doctor','dentist','appointment'], color:'#7986CB' },
-    { name:'Exercise',       keywords:['gym','workout','yoga','run','exercise','training','sport'],  color:'#E67C73' },
-  ];
+  const OTHER_COLOR = '#1A73E8'; // Default blue — "Other" (uncategorized)
 
   let weekOffset = 0;
   let _container = null;
@@ -39,17 +31,26 @@ const CalendarView = (() => {
   let _settingsOpen = false;
 
   // ── CATEGORIES ─────────────────────────────────────────────────────────────
+  // Always returns all 11 GCal colors with user-set labels and keywords.
   function getCategories() {
-    try { return JSON.parse(localStorage.getItem('apex_categories') || 'null') || DEFAULT_CATEGORIES; }
-    catch { return DEFAULT_CATEGORIES; }
+    try {
+      const stored = JSON.parse(localStorage.getItem('apex_cal_colors') || 'null') || [];
+      return GCAL_PALETTE.map((c, i) => ({
+        hex:      c.hex,
+        label:    stored[i]?.label    ?? c.name,
+        keywords: stored[i]?.keywords ?? []
+      }));
+    } catch {
+      return GCAL_PALETTE.map(c => ({ hex: c.hex, label: c.name, keywords: [] }));
+    }
   }
   function saveCategories(cats) {
-    localStorage.setItem('apex_categories', JSON.stringify(cats));
+    localStorage.setItem('apex_cal_colors', JSON.stringify(cats));
   }
   function getEventColor(title) {
     const lower = (title || '').toLowerCase();
     for (const cat of getCategories()) {
-      if ((cat.keywords || []).some(k => lower.includes(k.toLowerCase()))) return cat.color;
+      if (cat.keywords.length && cat.keywords.some(k => lower.includes(k.toLowerCase()))) return cat.hex;
     }
     return OTHER_COLOR;
   }
@@ -138,77 +139,36 @@ const CalendarView = (() => {
   }
 
   // ── SETTINGS PANEL ────────────────────────────────────────────────────────
-  function buildColorPicker(currentHex, onSelect) {
-    return `<div class="gcal-color-row">
-      ${GCAL_COLORS.map(c=>`
-        <div class="gcal-color-chip${c.hex===currentHex?' selected':''}"
-             style="background:${c.hex}" data-hex="${c.hex}" title="${c.name}"></div>`).join('')}
-    </div>`;
-  }
-
+  // Shows all 11 fixed GCal colors. User sets a label and keywords per color.
+  // No add/delete — colors are fixed. Blue (Other) is always the default catch-all.
   function renderSettingsPanel(panel) {
     const cats = getCategories();
-    panel.querySelector('#gcal-cat-list').innerHTML = cats.map((c,i)=>`
-      <div class="gcal-cat-row" data-idx="${i}">
-        <div class="gcal-cat-color-btn" data-idx="${i}" style="background:${c.color}" title="Change color"></div>
-        <div class="gcal-cat-color-picker" id="gcal-cp-${i}" style="display:none">
-          ${buildColorPicker(c.color, null)}
-        </div>
-        <input class="gcal-cat-name-input" data-idx="${i}" value="${c.name}" placeholder="Category name"/>
-        <input class="gcal-cat-kw-input"   data-idx="${i}" value="${(c.keywords||[]).join(', ')}" placeholder="keyword1, keyword2"/>
-        <button class="gcal-cat-del" data-idx="${i}" title="Remove">✕</button>
-      </div>`).join('');
+    panel.querySelector('#gcal-cat-list').innerHTML = cats.map((c, i) => `
+      <div class="gcal-color-row-item">
+        <div class="gcal-fixed-swatch" style="background:${c.hex}" title="${GCAL_PALETTE[i].name}"></div>
+        <input class="gcal-cat-label-input" data-idx="${i}"
+          value="${c.label}" placeholder="${GCAL_PALETTE[i].name}"/>
+        <input class="gcal-cat-kw-input" data-idx="${i}"
+          value="${c.keywords.join(', ')}" placeholder="keyword1, keyword2"/>
+      </div>`).join('') + `
+      <div class="gcal-other-row">
+        <div class="gcal-fixed-swatch" style="background:${OTHER_COLOR}"></div>
+        <span class="gcal-cat-other-label">Other — default (uncategorized events)</span>
+      </div>`;
 
-    // Color button → toggle picker
-    panel.querySelectorAll('.gcal-cat-color-btn').forEach(btn=>{
-      btn.addEventListener('click',e=>{
-        e.stopPropagation();
-        const idx = +btn.dataset.idx;
-        const picker = panel.querySelector(`#gcal-cp-${idx}`);
-        const isOpen = picker.style.display !== 'none';
-        panel.querySelectorAll('.gcal-cat-color-picker').forEach(p=>p.style.display='none');
-        if (!isOpen) picker.style.display = 'flex';
-      });
-    });
-
-    // Color chip selection
-    panel.querySelectorAll('.gcal-color-chip').forEach(chip=>{
-      chip.addEventListener('click',e=>{
-        e.stopPropagation();
-        const row  = chip.closest('.gcal-cat-row');
-        const idx  = +row.dataset.idx;
+    panel.querySelectorAll('.gcal-cat-label-input').forEach(inp => {
+      inp.addEventListener('change', () => {
         const cats = getCategories();
-        cats[idx].color = chip.dataset.hex;
-        saveCategories(cats); _cache={};
-        renderSettingsPanel(panel);
-        if (_container) placeEventsOnly(_container);
+        cats[+inp.dataset.idx].label = inp.value.trim() || GCAL_PALETTE[+inp.dataset.idx].name;
+        saveCategories(cats);
       });
     });
 
-    // Name edit
-    panel.querySelectorAll('.gcal-cat-name-input').forEach(inp=>{
-      inp.addEventListener('change',()=>{
-        const cats=getCategories(); cats[+inp.dataset.idx].name=inp.value.trim();
-        saveCategories(cats); _cache={};
-      });
-    });
-
-    // Keywords edit
-    panel.querySelectorAll('.gcal-cat-kw-input').forEach(inp=>{
-      inp.addEventListener('change',()=>{
-        const cats=getCategories();
-        cats[+inp.dataset.idx].keywords=inp.value.split(',').map(k=>k.trim()).filter(Boolean);
-        saveCategories(cats); _cache={};
-        if (_container) placeEventsOnly(_container);
-      });
-    });
-
-    // Delete
-    panel.querySelectorAll('.gcal-cat-del').forEach(btn=>{
-      btn.addEventListener('click',()=>{
-        const cats=getCategories(); cats.splice(+btn.dataset.idx,1);
-        saveCategories(cats); _cache={};
-        renderSettingsPanel(panel);
+    panel.querySelectorAll('.gcal-cat-kw-input').forEach(inp => {
+      inp.addEventListener('change', () => {
+        const cats = getCategories();
+        cats[+inp.dataset.idx].keywords = inp.value.split(',').map(k => k.trim()).filter(Boolean);
+        saveCategories(cats); _cache = {};
         if (_container) placeEventsOnly(_container);
       });
     });
@@ -224,31 +184,15 @@ const CalendarView = (() => {
         <button class="gcal-sp-close" id="gcal-sp-close">✕</button>
       </div>
       <div class="gcal-sp-body">
-        <div class="gcal-sp-section-title">EVENT CATEGORIES</div>
-        <div class="gcal-sp-hint">Keywords auto-color events. Anything else defaults to <span style="color:${OTHER_COLOR};font-weight:700">Other</span> (blue).</div>
-        <div id="gcal-cat-list"></div>
-        <button class="gcal-sp-add-btn" id="gcal-add-cat">+ ADD CATEGORY</button>
-        <div class="gcal-other-row">
-          <div class="gcal-cat-color-btn" style="background:${OTHER_COLOR};cursor:default"></div>
-          <span class="gcal-cat-other-label">Other (default — uncategorized)</span>
+        <div class="gcal-sp-section-title">EVENT COLORS</div>
+        <div class="gcal-sp-hint">Label each color and set keywords. Any event matching those keywords gets that color. Unmatched events use <strong style="color:${OTHER_COLOR}">Other</strong> (blue).</div>
+        <div class="gcal-color-col-headers">
+          <span></span><span>LABEL</span><span>KEYWORDS (comma separated)</span>
         </div>
+        <div id="gcal-cat-list"></div>
       </div>`;
 
-    panel.querySelector('#gcal-sp-close').addEventListener('click',()=>closeSettings());
-    panel.querySelector('#gcal-add-cat').addEventListener('click',()=>{
-      const cats=getCategories();
-      cats.push({name:'New Category',keywords:[],color:GCAL_COLORS[0].hex});
-      saveCategories(cats);
-      renderSettingsPanel(panel);
-    });
-
-    // Close picker when clicking outside
-    panel.addEventListener('click',e=>{
-      if (!e.target.closest('.gcal-cat-color-btn') && !e.target.closest('.gcal-cat-color-picker')) {
-        panel.querySelectorAll('.gcal-cat-color-picker').forEach(p=>p.style.display='none');
-      }
-    });
-
+    panel.querySelector('#gcal-sp-close').addEventListener('click', () => closeSettings());
     renderSettingsPanel(panel);
     return panel;
   }
@@ -297,9 +241,9 @@ const CalendarView = (() => {
     }).join('');
     const allDayCols= days.map(()=>`<div class="gcal-allday-col"></div>`).join('');
 
-    // Legend from current categories
-    const cats   = getCategories();
-    const legend = cats.map(c=>`<div class="gcal-legend-item"><span class="gcal-legend-dot" style="background:${c.color}"></span>${c.name}</div>`).join('')
+    // Legend: only show colors that have keywords assigned, plus Other
+    const cats   = getCategories().filter(c => c.keywords.length > 0);
+    const legend = cats.map(c => `<div class="gcal-legend-item"><span class="gcal-legend-dot" style="background:${c.hex}"></span>${c.label}</div>`).join('')
       + `<div class="gcal-legend-item"><span class="gcal-legend-dot" style="background:${OTHER_COLOR}"></span>Other</div>`;
 
     container.innerHTML = `

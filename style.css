@@ -785,42 +785,26 @@ html, body {
 }
 .gcal-cat-other-label { font-size:0.7rem; color:var(--text-dim); }
 
-/* Category rows in calendar settings */
-.gcal-cat-row { margin-bottom:10px; }
-.gcal-cat-row > div:first-child,
-.gcal-cat-row .gcal-cat-color-btn {
-  width:22px; height:22px; border-radius:50%; flex-shrink:0;
-  cursor:pointer; border:2px solid rgba(255,255,255,0.2);
-  transition:transform 0.12s; display:inline-block;
+/* Calendar color rows — fixed 11 GCal colors */
+.gcal-color-col-headers {
+  display:grid; grid-template-columns:26px 80px 1fr;
+  gap:6px; font-size:0.58rem; letter-spacing:0.1em;
+  color:var(--text-dim); margin-bottom:4px; padding:0 2px;
 }
-.gcal-cat-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.gcal-cat-color-btn:hover { transform:scale(1.15); }
-.gcal-cat-color-picker {
-  display:none; gap:4px; flex-wrap:wrap;
-  width:100%; padding:8px; background:var(--surface-2);
-  border-radius:var(--r-xs); border:1px solid var(--border); margin-top:4px;
-  order:99;
+.gcal-color-row-item {
+  display:grid; grid-template-columns:26px 80px 1fr;
+  gap:6px; align-items:center; margin-bottom:6px;
 }
-.gcal-color-row { display:flex; gap:5px; flex-wrap:wrap; }
-.gcal-color-chip {
-  width:22px; height:22px; border-radius:50%; cursor:pointer;
-  border:2px solid transparent; transition:transform 0.12s, border-color 0.12s;
+.gcal-fixed-swatch {
+  width:20px; height:20px; border-radius:50%; flex-shrink:0;
+  border:2px solid rgba(255,255,255,0.15);
 }
-.gcal-color-chip:hover   { transform:scale(1.2); }
-.gcal-color-chip.selected{ border-color:#fff; }
-.gcal-cat-name-input, .gcal-cat-kw-input {
+.gcal-cat-label-input, .gcal-cat-kw-input {
   background:var(--surface-2); border:1px solid var(--border);
-  color:var(--text); font-family:inherit; font-size:0.7rem;
-  padding:4px 8px; border-radius:var(--r-xs);
+  color:var(--text); font-family:inherit; font-size:0.68rem;
+  padding:4px 7px; border-radius:var(--r-xs); width:100%;
 }
-.gcal-cat-name-input { flex:1; min-width:70px; }
-.gcal-cat-kw-input   { flex:2; min-width:80px; }
-.gcal-cat-name-input:focus,.gcal-cat-kw-input:focus { border-color:var(--orange); outline:none; }
-.gcal-cat-del {
-  background:none; border:none; color:var(--text-dim);
-  cursor:pointer; font-size:0.9rem; transition:color 0.12s; flex-shrink:0;
-}
-.gcal-cat-del:hover { color:var(--orange); }
+.gcal-cat-label-input:focus,.gcal-cat-kw-input:focus { border-color:var(--orange); outline:none; }
 
 /* ── EMAIL SETTINGS PANEL ────────────────────────────── */
 .email-gear-btn {
